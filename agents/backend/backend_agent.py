@@ -37,37 +37,52 @@ class BackendAgent:
     """
     
     def __init__(self):
+        """Initialize the Backend Agent"""
         self.name = "backend-agent-alpha"
         self.type = AgentType.BACKEND
         self.status = AgentStatus.OFFLINE
+        
+        # Task tracking
         self.current_task = None
         self.start_time = None
         self.last_progress_report = None
         
+        # GitHub client and repository
+        self.github_client = GitHubClient()
+        self.repo = None  # Will be set during GitHub initialization
+        self.current_branch = None  # Current working branch
+        
+        # Task executor
+        self.task_executor = TaskExecutor(self.name)
+        
         # Database session
         self.SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
         
-        # GitHub integration
-        self.github_client = GitHubClient()
-        
-        # Task execution
-        self.task_executor = TaskExecutor(agent_name=self.name)
-        
-        # Task execution configuration
-        self.max_task_hours = BACKEND_CONFIG["task_timeout_hours"]
-        self.progress_report_interval = BACKEND_CONFIG["progress_report_interval"]  # minutes
-        self.poll_interval = 10  # seconds
-        
-        # Performance metrics
+        # Performance metrics - Use consistent naming (metrics is the main one)
         self.metrics = {
             "tasks_completed": 0,
+            "tasks_assigned": 0,
             "tasks_failed": 0,
-            "total_execution_time": 0.0,
-            "uptime_start": None,
-            "errors_encountered": 0,
             "branches_created": 0,
-            "prs_created": 0
+            "prs_created": 0,
+            "uptime_start": datetime.now(timezone.utc).isoformat(),  # Store as ISO string immediately
+            "last_task_completed": None,
+            "average_execution_time": 0.0,
+            "total_execution_time": 0.0,
+            "errors_encountered": 0
         }
+        
+        # Keep performance_metrics as alias for backward compatibility
+        self.performance_metrics = self.metrics
+        
+        # Task execution configuration
+        self.max_task_hours = BACKEND_CONFIG.get("task_timeout_hours", 4)
+        self.progress_report_interval = BACKEND_CONFIG.get("progress_report_interval", 30)  # minutes
+        self.poll_interval = 10  # seconds
+        
+        # Task polling control
+        self.is_running = False
+        self.polling_interval = 5  # seconds (backward compatibility)
         
         # Agent capabilities
         self.capabilities = BACKEND_CAPABILITIES.copy()
@@ -77,12 +92,16 @@ class BackendAgent:
     async def initialize(self):
         """Initialize the backend agent"""
         try:
-            self.metrics["uptime_start"] = datetime.now(timezone.utc)
+            # Update uptime start time (already in ISO format from __init__)
+            self.metrics["uptime_start"] = datetime.now(timezone.utc).isoformat()
             
             # Initialize GitHub client
             github_initialized = await self.github_client.initialize()
             if github_initialized:
                 await self._log_info("GitHub client initialized successfully")
+                # Store repository reference for convenience
+                if hasattr(self.github_client, 'repo'):
+                    self.repo = self.github_client.repo
             else:
                 await self._log_error("GitHub client initialization failed - GitHub integration disabled")
             
@@ -105,37 +124,51 @@ class BackendAgent:
     
     async def register_agent(self):
         """Register this agent in the database"""
-        db = self.SessionLocal()
         try:
-            # Check if agent already exists
-            existing_agent = db.query(Agent).filter(Agent.name == self.name).first()
-            
-            if existing_agent:
-                existing_agent.status = AgentStatus.ACTIVE
-                existing_agent.last_heartbeat = datetime.now(timezone.utc)
-                existing_agent.performance_metrics = self.metrics
-                existing_agent.capabilities = self.capabilities
-            else:
-                agent = Agent(
-                    name=self.name,
-                    type=self.type,
-                    status=AgentStatus.ACTIVE,
-                    capabilities=self.capabilities,
-                    performance_metrics=self.metrics,
-                    configuration=BACKEND_CONFIG.copy(),
-                    max_concurrent_tasks="1"
-                )
-                db.add(agent)
-            
-            db.commit()
-            await self._log_info("Backend Agent registered in database")
-            
+            with self.SessionLocal() as db:
+                # Check if agent already exists
+                existing_agent = db.query(Agent).filter(Agent.name == self.name).first()
+                
+                # Prepare metrics for JSON storage - fix the datetime conversion
+                json_safe_metrics = self.metrics.copy()
+                
+                # Only convert datetime to string if it's actually a datetime object
+                if "uptime_start" in json_safe_metrics and json_safe_metrics["uptime_start"]:
+                    if hasattr(json_safe_metrics["uptime_start"], 'isoformat'):
+                        # It's a datetime object, convert it
+                        json_safe_metrics["uptime_start"] = json_safe_metrics["uptime_start"].isoformat()
+                    # If it's already a string, leave it as is
+                
+                # Handle last_task_completed similarly
+                if "last_task_completed" in json_safe_metrics and json_safe_metrics["last_task_completed"]:
+                    if hasattr(json_safe_metrics["last_task_completed"], 'isoformat'):
+                        json_safe_metrics["last_task_completed"] = json_safe_metrics["last_task_completed"].isoformat()
+                
+                if existing_agent:
+                    # Update existing agent
+                    existing_agent.status = self.status  # Use enum not string value
+                    existing_agent.performance_metrics = json_safe_metrics
+                    existing_agent.updated_at = datetime.now(timezone.utc)
+                    await self._log_info(f"Updated agent registration: {self.name}")
+                else:
+                    # Create new agent
+                    new_agent = Agent(
+                        name=self.name,
+                        type=self.type,  # Use 'type' not 'agent_type'
+                        status=self.status,  # Use enum not string value
+                        capabilities=self.capabilities,
+                        performance_metrics=json_safe_metrics
+                    )
+                    db.add(new_agent)
+                    await self._log_info(f"Registered new agent: {self.name}")
+                
+                db.commit()
+                logger.info(f"✅ Agent {self.name} registered successfully")
+                
         except Exception as e:
-            db.rollback()
-            await self._log_error(f"Agent registration failed: {e}")
+            await self._log_error(f"Failed to register agent: {e}")
+            logger.error(f"❌ Agent registration failed: {e}")
             raise
-        finally:
-            db.close()
     
     async def poll_for_tasks(self):
         """Continuously check for backend tasks in ASSIGNED status"""
@@ -429,7 +462,14 @@ class BackendAgent:
             if agent:
                 agent.status = status
                 agent.last_heartbeat = datetime.now(timezone.utc)
-                agent.performance_metrics = self.metrics
+                
+                # Ensure performance_metrics contains only JSON-serializable data
+                json_safe_metrics = self.metrics.copy()
+                if "uptime_start" in json_safe_metrics and json_safe_metrics["uptime_start"] is not None:
+                    if isinstance(json_safe_metrics["uptime_start"], datetime):
+                        json_safe_metrics["uptime_start"] = json_safe_metrics["uptime_start"].isoformat()
+                
+                agent.performance_metrics = json_safe_metrics
                 if self.current_task:
                     agent.current_task_id = self.current_task.id
                 else:
@@ -861,7 +901,22 @@ if __name__ == "__main__":
         try:
             uptime = None
             if self.metrics["uptime_start"]:
-                uptime_delta = datetime.now(timezone.utc) - self.metrics["uptime_start"]
+                # Handle uptime_start as ISO string (convert back to datetime for calculation)
+                if isinstance(self.metrics["uptime_start"], str):
+                    try:
+                        # Handle ISO format string and convert to timezone-aware datetime
+                        uptime_start_str = self.metrics["uptime_start"]
+                        if uptime_start_str.endswith('Z'):
+                            uptime_start_str = uptime_start_str[:-1] + '+00:00'
+                        uptime_start = datetime.fromisoformat(uptime_start_str)
+                        if uptime_start.tzinfo is None:
+                            uptime_start = uptime_start.replace(tzinfo=timezone.utc)
+                    except (ValueError, AttributeError):
+                        # Fallback if parsing fails
+                        uptime_start = datetime.now(timezone.utc)
+                else:
+                    uptime_start = self.metrics["uptime_start"]
+                uptime_delta = datetime.now(timezone.utc) - uptime_start
                 uptime = str(uptime_delta).split('.')[0]  # Remove microseconds
             
             current_task_info = None
@@ -897,6 +952,24 @@ if __name__ == "__main__":
             
         except Exception as e:
             return {"error": f"Failed to generate status report: {str(e)[:100]}..."}
+    
+    async def run(self):
+        """Run the backend agent (keep it running indefinitely)"""
+        try:
+            # Update status to active
+            await self.update_status(AgentStatus.ACTIVE)
+            
+            # Keep the agent running
+            while True:
+                await asyncio.sleep(1)
+                
+        except KeyboardInterrupt:
+            logger.info("Backend Agent shutting down...")
+            await self.update_status(AgentStatus.OFFLINE)
+        except Exception as e:
+            logger.error(f"Backend Agent crashed: {e}")
+            await self.update_status(AgentStatus.ERROR)
+            raise
 
 # Entry point for running the backend agent
 async def main():

@@ -1,0 +1,194 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ai-agent-automation-hub"
+dynamic = ["version"]
+description = "AI Agent Automation Hub with Discord Bot Integration"
+readme = "README.md"
+requires-python = ">=3.11"
+license = {text = "MIT"}
+authors = [
+    {name = "AI Dev Team", email = "team@example.com"},
+]
+maintainers = [
+    {name = "AI Dev Team", email = "team@example.com"},
+]
+keywords = [
+    "ai", "automation", "discord", "bot", "agents", "tasks", 
+    "orchestration", "backend", "database", "testing", "docker"
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Communications :: Chat",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: System :: Distributed Computing",
+    "Framework :: AsyncIO",
+]
+
+dependencies = [
+    "discord.py>=2.3.2",
+    "asyncpg>=0.29.0",
+    "python-dotenv>=1.0.0",
+    "aiohttp>=3.9.0",
+    "pyyaml>=6.0.1",
+    "psutil>=5.9.6",
+    "croniter>=1.4.1",
+    "cryptography>=41.0.8",
+    "pydantic>=2.5.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.3",
+    "pytest-asyncio>=0.21.1",
+    "pytest-mock>=3.12.0",
+    "pytest-cov>=4.0.0",
+    "black>=23.11.0",
+    "flake8>=5.0.0",
+    "isort>=5.12.0",
+    "mypy>=1.7.1",
+    "pre-commit>=3.6.0",
+]
+monitoring = [
+    "prometheus-client>=0.17.0",
+    "grafana-api>=1.0.3",
+]
+all = [
+    "pytest>=7.4.3",
+    "pytest-asyncio>=0.21.1",
+    "pytest-mock>=3.12.0",
+    "pytest-cov>=4.0.0",
+    "black>=23.11.0",
+    "flake8>=5.0.0",
+    "isort>=5.12.0",
+    "mypy>=1.7.1",
+    "pre-commit>=3.6.0",
+    "prometheus-client>=0.17.0",
+    "grafana-api>=1.0.3",
+]
+
+[project.scripts]
+automation-hub-bot = "bot.run_bot:main"
+automation-hub-setup = "scripts.init_database:main"
+automation-hub-health = "deploy.health_check:main"
+automation-hub-validate = "scripts.validate_deployment:main"
+
+[project.urls]
+Homepage = "https://github.com/VictorGavo/ai-agent-automation-hub"
+Documentation = "https://github.com/VictorGavo/ai-agent-automation-hub/blob/main/README.md"
+Repository = "https://github.com/VictorGavo/ai-agent-automation-hub"
+"Bug Tracker" = "https://github.com/VictorGavo/ai-agent-automation-hub/issues"
+Changelog = "https://github.com/VictorGavo/ai-agent-automation-hub/blob/main/CHANGES_SUMMARY.md"
+
+[tool.setuptools]
+package-dir = {"" = "."}
+
+[tool.setuptools.dynamic]
+version = {file = "VERSION"}
+
+[tool.setuptools.packages.find]
+where = ["."]
+exclude = ["tests*", "docs*", "build*", "dist*", "*.egg-info*"]
+
+[tool.setuptools.package-data]
+"*" = ["*.md", "*.txt", "*.yml", "*.yaml", "*.json"]
+"dev_bible" = ["**/*.md"]
+"database" = ["migrations/*.py", "models/*.py"]
+
+# Black configuration
+[tool.black]
+line-length = 88
+target-version = ['py311']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # directories
+  \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | build
+  | dist
+)/
+'''
+
+# isort configuration
+[tool.isort]
+profile = "black"
+multi_line_output = 3
+line_length = 88
+known_first_party = ["agents", "database", "bot", "config"]
+
+# MyPy configuration
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
+strict_equality = true
+
+[[tool.mypy.overrides]]
+module = ["discord.*", "asyncpg.*", "croniter.*"]
+ignore_missing_imports = true
+
+# Pytest configuration
+[tool.pytest.ini_options]
+minversion = "7.0"
+addopts = "-ra -q --strict-markers --strict-config"
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+asyncio_mode = "auto"
+
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+    "unit: marks tests as unit tests",
+    "discord: marks tests that require Discord API access",
+    "database: marks tests that require database access",
+]
+
+# Coverage configuration
+[tool.coverage.run]
+source = ["."]
+omit = [
+    "tests/*",
+    "setup.py",
+    "venv/*",
+    ".venv/*",
+    "*/migrations/*",
+    "*/__pycache__/*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if self.debug:",
+    "if settings.DEBUG",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if 0:",
+    "if __name__ == .__main__.:",
+    "class .*\\bProtocol\\):",
+    "@(abc\\.)?abstractmethod",
+]

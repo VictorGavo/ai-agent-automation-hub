@@ -1,0 +1,46 @@
+# Include documentation and configuration files
+include README.md
+include LICENSE
+include VERSION
+include requirements.txt
+include docker-compose.yml
+include Dockerfile
+include *.md
+
+# Include all dev bible documentation
+recursive-include dev_bible *.md
+
+# Include database files
+recursive-include database *.py
+
+# Include deployment scripts and configuration
+recursive-include deploy *.sh *.yml *.yaml *.sql *.json
+
+# Include example files
+recursive-include examples *.py
+
+# Include script files
+recursive-include scripts *.py
+
+# Include log directory structure
+recursive-include logs .gitkeep
+
+# Include workspace directory structure
+recursive-include workspace .gitkeep
+
+# Include data directory structure
+recursive-include data .gitkeep
+
+# Include config files
+recursive-include config *.py *.yml *.yaml *.json
+
+# Exclude unwanted files
+global-exclude *.pyc
+global-exclude *.pyo
+global-exclude *.pyd
+global-exclude __pycache__
+global-exclude .git*
+global-exclude .DS_Store
+global-exclude *.so
+global-exclude *.egg-info
+prune **/__pycache__

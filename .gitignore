@@ -1,5 +1,7 @@
 .env
-logs/*.log
+logs/
+temp/
 venv/
 __pycache__/
 *.pyc
+data/postgres/

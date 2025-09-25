@@ -1,6 +1,8 @@
+# AI Agent Automation Hub - Production Docker Compose
 version: '3.8'
 
 services:
+  # PostgreSQL Database Service
   postgres:
     image: postgres:15-alpine
     container_name: automation_hub_postgres
@@ -9,70 +11,288 @@ services:
       POSTGRES_USER: automation
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-secure_password_change_me}
       POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+      # Performance tuning
+      POSTGRES_SHARED_BUFFERS: "256MB"
+      POSTGRES_MAX_CONNECTIONS: "200"
+      POSTGRES_WORK_MEM: "4MB"
     ports:
-      - "5433:5432"
+      - "${POSTGRES_PORT:-5433}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./database/migrations:/docker-entrypoint-initdb.d
+      - postgres_backups:/backups
+      - ./database/migrations:/docker-entrypoint-initdb.d:ro
+      - ./deploy/postgres-init:/docker-entrypoint-initdb.d/custom:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U automation -d automation_hub"]
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 30s
     restart: unless-stopped
     networks:
       - automation_network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
 
-  orchestrator:
+  # Discord Bot Service
+  discord-bot:
     build:
       context: .
-      dockerfile: agents/orchestrator/Dockerfile
-    container_name: automation_hub_orchestrator
+      dockerfile: Dockerfile
+      args:
+        BUILD_DATE: ${BUILD_DATE:-unknown}
+        VCS_REF: ${VCS_REF:-unknown}
+        VERSION: ${VERSION:-latest}
+    container_name: automation_hub_discord_bot
     environment:
-      - DATABASE_URL=postgresql://automation:${POSTGRES_PASSWORD:-secure_password_change_me}@postgres:5432/automation_hub
+      # Discord Configuration
       - DISCORD_BOT_TOKEN=${DISCORD_BOT_TOKEN}
+      - DISCORD_STATUS_CHANNEL_ID=${DISCORD_STATUS_CHANNEL_ID}
+      - DISCORD_ALLOWED_GUILDS=${DISCORD_ALLOWED_GUILDS}
+      - DISCORD_ADMIN_ROLE=${DISCORD_ADMIN_ROLE:-Admin}
+      
+      # Database Configuration
+      - DATABASE_URL=postgresql://automation:${POSTGRES_PASSWORD:-secure_password_change_me}@postgres:5432/automation_hub
+      
+      # Integration Tokens
       - GITHUB_TOKEN=${GITHUB_TOKEN}
-      - CLAUDE_API_KEY=${CLAUDE_API_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      
+      # Bot Configuration
+      - BOT_MAX_CONCURRENT_TASKS=${BOT_MAX_CONCURRENT_TASKS:-10}
+      - BOT_TASK_TIMEOUT_MINUTES=${BOT_TASK_TIMEOUT_MINUTES:-60}
+      - BOT_STATUS_UPDATE_INTERVAL=${BOT_STATUS_UPDATE_INTERVAL:-30}
+      - BOT_LOG_LEVEL=${BOT_LOG_LEVEL:-INFO}
+      
+      # Application Configuration
+      - APP_MODE=bot
       - ENVIRONMENT=production
-      - LOG_LEVEL=INFO
-      - AGENT_NAME=orchestrator
       - PYTHONPATH=/app
+      - INIT_DB=true
     volumes:
       - ./logs:/app/logs
-      - ./.git:/app/.git:ro
       - ./dev_bible:/app/dev_bible:ro
+      - ./workspace:/app/workspace
+      - ./config:/app/config
+      - bot_data:/app/data
     depends_on:
       postgres:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "python", "-c", "import sys; sys.exit(0)"]
+      test: ["CMD", "python", "-c", "
+import sys, os;
+sys.path.insert(0, '/app');
+from bot.config import get_config;
+config = get_config();
+print('✅ Bot healthy')
+"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+    networks:
+      - automation_network
+    ports:
+      - "${BOT_HEALTH_PORT:-8080}:8080"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1.0'
+
+  # Orchestrator Agent Service (Optional - can be run separately)
+  orchestrator:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        BUILD_DATE: ${BUILD_DATE:-unknown}
+        VCS_REF: ${VCS_REF:-unknown}
+        VERSION: ${VERSION:-latest}
+    container_name: automation_hub_orchestrator
+    environment:
+      - DATABASE_URL=postgresql://automation:${POSTGRES_PASSWORD:-secure_password_change_me}@postgres:5432/automation_hub
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - APP_MODE=orchestrator
+      - ENVIRONMENT=production
+      - LOG_LEVEL=INFO
+      - PYTHONPATH=/app
+    volumes:
+      - ./logs:/app/logs
+      - ./dev_bible:/app/dev_bible:ro
+      - ./workspace:/app/workspace
+      - orchestrator_data:/app/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "
+import sys;
+sys.path.insert(0, '/app');
+from agents.orchestrator_agent import OrchestratorAgent;
+print('✅ Orchestrator healthy')
+"]
       interval: 30s
       timeout: 10s
       retries: 3
     restart: unless-stopped
     networks:
       - automation_network
-    user: "1000:1000"  # Non-root user for security
+    ports:
+      - "${ORCHESTRATOR_PORT:-8081}:8081"
+    profiles:
+      - full
+      - orchestrator
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
-  # Placeholder for future Backend Agent
-  # backend-agent:
-  #   build:
-  #     context: .
-  #     dockerfile: agents/backend/Dockerfile
-  #   container_name: automation_hub_backend_agent
-  #   environment:
-  #     - DATABASE_URL=postgresql://automation:${POSTGRES_PASSWORD:-secure_password_change_me}@postgres:5432/automation_hub
-  #     - CLAUDE_API_KEY=${CLAUDE_API_KEY}
-  #     - AGENT_NAME=backend-agent
-  #   volumes:
-  #     - ./logs:/app/logs
-  #     - ./workspace:/app/workspace
-  #   depends_on:
-  #     postgres:
-  #       condition: service_healthy
-  #   networks:
-  #     - automation_network
-  #   user: "1000:1000"
+  # Backend Agent Service (Optional)
+  backend-agent:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        BUILD_DATE: ${BUILD_DATE:-unknown}
+        VCS_REF: ${VCS_REF:-unknown}
+        VERSION: ${VERSION:-latest}
+    container_name: automation_hub_backend_agent
+    environment:
+      - DATABASE_URL=postgresql://automation:${POSTGRES_PASSWORD:-secure_password_change_me}@postgres:5432/automation_hub
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - APP_MODE=backend
+      - ENVIRONMENT=production
+      - LOG_LEVEL=INFO
+      - PYTHONPATH=/app
+    volumes:
+      - ./logs:/app/logs
+      - ./dev_bible:/app/dev_bible:ro
+      - ./workspace:/app/workspace
+      - backend_data:/app/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "
+import sys;
+sys.path.insert(0, '/app');
+from agents.backend_agent import BackendAgent;
+print('✅ Backend agent healthy')
+"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+    networks:
+      - automation_network
+    ports:
+      - "${BACKEND_AGENT_PORT:-8082}:8082"
+    profiles:
+      - full
+      - backend
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Testing Agent Service (Optional)
+  testing-agent:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        BUILD_DATE: ${BUILD_DATE:-unknown}
+        VCS_REF: ${VCS_REF:-unknown}
+        VERSION: ${VERSION:-latest}
+    container_name: automation_hub_testing_agent
+    environment:
+      - DATABASE_URL=postgresql://automation:${POSTGRES_PASSWORD:-secure_password_change_me}@postgres:5432/automation_hub
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - APP_MODE=testing
+      - ENVIRONMENT=production
+      - LOG_LEVEL=INFO
+      - PYTHONPATH=/app
+      - TESTING_POLLING_INTERVAL=60
+      - TESTING_AUTO_APPROVE=true
+    volumes:
+      - ./logs:/app/logs
+      - ./dev_bible:/app/dev_bible:ro
+      - ./workspace:/app/workspace
+      - testing_data:/app/data
+      - /tmp/testing_workspace:/tmp/testing_workspace
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "
+import sys;
+sys.path.insert(0, '/app');
+from agents.testing.testing_agent import TestingAgent;
+print('✅ Testing agent healthy')
+"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+    networks:
+      - automation_network
+    ports:
+      - "${TESTING_AGENT_PORT:-8083}:8083"
+    profiles:
+      - full
+      - testing
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Optional: Monitoring and Health Dashboard
+  monitoring:
+    image: prom/prometheus:latest
+    container_name: automation_hub_monitoring
+    ports:
+      - "${MONITORING_PORT:-9090}:9090"
+    volumes:
+      - ./deploy/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    restart: unless-stopped
+    networks:
+      - automation_network
+    profiles:
+      - monitoring
+      - full
 
 volumes:
   postgres_data:
@@ -80,7 +300,23 @@ volumes:
     driver_opts:
       type: none
       o: bind
-      device: ./data/postgres
+      device: ${DATA_DIR:-./data}/postgres
+  postgres_backups:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${DATA_DIR:-./data}/backups
+  bot_data:
+    driver: local
+  orchestrator_data:
+    driver: local
+  backend_data:
+    driver: local
+  testing_data:
+    driver: local
+  prometheus_data:
+    driver: local
 
 networks:
   automation_network:
@@ -89,3 +325,4 @@ networks:
       driver: default
       config:
         - subnet: 172.20.0.0/16
+          gateway: 172.20.0.1

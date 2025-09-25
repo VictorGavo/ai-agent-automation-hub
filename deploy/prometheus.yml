@@ -1,0 +1,48 @@
+# Prometheus monitoring configuration for AI Agent Automation Hub
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    monitor: 'automation-hub'
+
+rule_files:
+  # - "first_rules.yml"
+  # - "second_rules.yml"
+
+scrape_configs:
+  # Main application health monitoring
+  - job_name: 'automation-hub-services'
+    static_configs:
+      - targets: 
+          - 'discord-bot:8080'
+          - 'orchestrator:8081' 
+          - 'backend-agent:8082'
+          - 'testing-agent:8083'
+    metrics_path: '/health'
+    scrape_interval: 30s
+    scrape_timeout: 10s
+    honor_labels: true
+
+  # PostgreSQL monitoring
+  - job_name: 'postgres'
+    static_configs:
+      - targets: ['postgres:5432']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  # Docker container monitoring
+  - job_name: 'docker'
+    static_configs:
+      - targets: ['host.docker.internal:9323']
+    scrape_interval: 30s
+
+  # System monitoring (if node_exporter is available)
+  - job_name: 'node'
+    static_configs:
+      - targets: ['host.docker.internal:9100']
+    scrape_interval: 30s
+
+  # Prometheus self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']

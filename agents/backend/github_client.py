@@ -7,7 +7,7 @@ import logging
 from typing import Optional, Dict, List, Any
 from datetime import datetime, timezone
 
-from github import Github, GithubException
+from github import Github, GithubException, InputGitTreeElement
 from github.Repository import Repository
 from github.GitRef import GitRef
 from github.ContentFile import ContentFile
@@ -150,43 +150,60 @@ class GitHubClient:
             # Get branch reference
             branch_ref = self.repo.get_git_ref(f"heads/{branch_name}")
             
-            # Get the latest commit on the branch
-            latest_commit = self.repo.get_git_commit(branch_ref.object.sha)
+            # Get the current commit SHA for the branch
+            current_commit_sha = branch_ref.object.sha
             
-            # Create blobs for all files
-            blobs = []
+            # Get the current commit object
+            current_commit = self.repo.get_git_commit(current_commit_sha)
+            
+            # Get the current tree object from the commit
+            current_tree = current_commit.tree
+            
+            # Create blobs for all files and prepare tree elements
+            tree_elements = []
             for file_path, content in files.items():
+                # Ensure content is properly encoded as string
+                if isinstance(content, bytes):
+                    content = content.decode('utf-8')
+                
+                # Create blob for file content
                 blob = self.repo.create_git_blob(content, "utf-8")
-                blobs.append({
-                    "path": file_path,
-                    "mode": "100644",  # Regular file mode
-                    "type": "blob",
-                    "sha": blob.sha
-                })
+                
+                # Add tree element using InputGitTreeElement
+                tree_elements.append(InputGitTreeElement(
+                    path=file_path,
+                    mode="100644",  # Regular file mode
+                    type="blob",
+                    sha=blob.sha
+                ))
             
-            # Create tree with all files
-            tree = self.repo.create_git_tree(blobs, latest_commit.tree)
+            # Create new tree with modified files, based on current tree
+            new_tree = self.repo.create_git_tree(tree_elements, base_tree=current_tree)
             
-            # Create commit
-            commit = self.repo.create_git_commit(
+            # Create new commit pointing to the new tree
+            new_commit = self.repo.create_git_commit(
                 message=commit_message,
-                tree=tree,
-                parents=[latest_commit]
+                tree=new_tree,
+                parents=[current_commit]
             )
             
-            # Update branch reference
-            branch_ref.edit(commit.sha)
+            # Update branch reference to point to new commit
+            branch_ref.edit(new_commit.sha)
             
             self.stats["commits_made"] += 1
             self.stats["files_modified"] += len(files)
             
             logger.info(f"Committed {len(files)} files to branch '{branch_name}': {commit_message}")
+            logger.debug(f"Commit SHA: {new_commit.sha}")
             logger.debug(f"Files committed: {list(files.keys())}")
             
             return True
             
         except GithubException as e:
             logger.error(f"GitHub API error committing to branch '{branch_name}': {e}")
+            logger.error(f"Error status: {e.status}")
+            if hasattr(e, 'data') and e.data:
+                logger.error(f"Error data: {e.data}")
             self.stats["operations_failed"] += 1
             return False
         except Exception as e:
@@ -433,6 +450,231 @@ class GitHubClient:
         successful_operations = total_operations - self.stats["operations_failed"]
         return (successful_operations / total_operations) * 100.0
     
+    async def get_pull_request(self, pr_number: int) -> Optional[Dict[str, Any]]:
+        """
+        Get pull request details by number
+        
+        Args:
+            pr_number: Pull request number
+            
+        Returns:
+            Dictionary with PR details if successful, None if failed
+        """
+        if not self.repo:
+            logger.error("GitHub client not initialized")
+            return None
+        
+        try:
+            pr = self.repo.get_pull(pr_number)
+            
+            # Get list of changed files
+            files_changed = [f.filename for f in pr.get_files()]
+            
+            # Get review status
+            reviews = list(pr.get_reviews())
+            review_status = "pending"
+            if reviews:
+                latest_review = reviews[-1]
+                review_status = latest_review.state.lower()
+            
+            pr_details = {
+                "number": pr.number,
+                "title": pr.title,
+                "body": pr.body or "",
+                "state": pr.state,
+                "mergeable": pr.mergeable,
+                "mergeable_state": pr.mergeable_state,
+                "merged": pr.merged,
+                "draft": pr.draft,
+                "url": pr.html_url,
+                "head_branch": pr.head.ref,
+                "base_branch": pr.base.ref,
+                "head_sha": pr.head.sha,
+                "author": pr.user.login,
+                "created_at": pr.created_at.isoformat(),
+                "updated_at": pr.updated_at.isoformat(),
+                "files_changed": files_changed,
+                "files_changed_count": len(files_changed),
+                "additions": pr.additions,
+                "deletions": pr.deletions,
+                "review_status": review_status,
+                "review_comments": pr.review_comments,
+                "comments": pr.comments,
+                "commits": pr.commits
+            }
+            
+            logger.info(f"Retrieved PR #{pr_number}: {pr.title}")
+            return pr_details
+            
+        except GithubException as e:
+            if e.status == 404:
+                logger.warning(f"PR #{pr_number} not found")
+                return None
+            else:
+                logger.error(f"GitHub API error getting PR #{pr_number}: {e}")
+                self.stats["operations_failed"] += 1
+                return None
+        except Exception as e:
+            logger.error(f"Failed to get PR #{pr_number}: {e}")
+            self.stats["operations_failed"] += 1
+            return None
+    
+    async def merge_pull_request(self, pr_number: int, merge_method: str = "merge", 
+                                commit_title: Optional[str] = None) -> Optional[Dict[str, Any]]:
+        """
+        Merge a pull request
+        
+        Args:
+            pr_number: Pull request number to merge
+            merge_method: Merge method ("merge", "squash", "rebase")
+            commit_title: Optional custom commit title
+            
+        Returns:
+            Dictionary with merge result if successful, None if failed
+        """
+        if not self.repo:
+            logger.error("GitHub client not initialized")
+            return None
+        
+        try:
+            pr = self.repo.get_pull(pr_number)
+            
+            # Check if PR is mergeable
+            if not pr.mergeable:
+                logger.warning(f"PR #{pr_number} is not mergeable: {pr.mergeable_state}")
+                return {
+                    "success": False,
+                    "message": f"PR is not mergeable: {pr.mergeable_state}",
+                    "mergeable_state": pr.mergeable_state
+                }
+            
+            # Check if PR is already merged
+            if pr.merged:
+                logger.info(f"PR #{pr_number} is already merged")
+                return {
+                    "success": True,
+                    "message": "PR was already merged",
+                    "sha": pr.merge_commit_sha,
+                    "already_merged": True
+                }
+            
+            # Perform the merge
+            merge_result = pr.merge(
+                commit_title=commit_title or f"Merge pull request #{pr_number}",
+                merge_method=merge_method
+            )
+            
+            logger.info(f"Successfully merged PR #{pr_number} using {merge_method} method")
+            return {
+                "success": True,
+                "message": f"PR #{pr_number} merged successfully",
+                "sha": merge_result.sha,
+                "merged": True
+            }
+            
+        except GithubException as e:
+            logger.error(f"GitHub API error merging PR #{pr_number}: {e}")
+            self.stats["operations_failed"] += 1
+            return {
+                "success": False,
+                "message": f"Failed to merge PR: {e.data.get('message', str(e)) if hasattr(e, 'data') else str(e)}"
+            }
+        except Exception as e:
+            logger.error(f"Failed to merge PR #{pr_number}: {e}")
+            self.stats["operations_failed"] += 1
+            return {
+                "success": False,
+                "message": f"Failed to merge PR: {str(e)}"
+            }
+    
+    async def close_pull_request(self, pr_number: int, reason: Optional[str] = None) -> bool:
+        """
+        Close a pull request without merging
+        
+        Args:
+            pr_number: Pull request number to close
+            reason: Optional reason for closing
+            
+        Returns:
+            True if successful, False otherwise
+        """
+        if not self.repo:
+            logger.error("GitHub client not initialized")
+            return False
+        
+        try:
+            pr = self.repo.get_pull(pr_number)
+            
+            # Add a comment with the reason if provided
+            if reason:
+                pr.create_issue_comment(f"Closing PR: {reason}")
+            
+            # Close the PR by editing it
+            pr.edit(state="closed")
+            
+            logger.info(f"Closed PR #{pr_number}" + (f" with reason: {reason}" if reason else ""))
+            return True
+            
+        except GithubException as e:
+            logger.error(f"GitHub API error closing PR #{pr_number}: {e}")
+            self.stats["operations_failed"] += 1
+            return False
+        except Exception as e:
+            logger.error(f"Failed to close PR #{pr_number}: {e}")
+            self.stats["operations_failed"] += 1
+            return False
+    
+    async def list_open_pull_requests(self, limit: int = 10) -> List[Dict[str, Any]]:
+        """
+        List open pull requests
+        
+        Args:
+            limit: Maximum number of PRs to return
+            
+        Returns:
+            List of PR summaries
+        """
+        if not self.repo:
+            logger.error("GitHub client not initialized")
+            return []
+        
+        try:
+            prs = self.repo.get_pulls(state="open", sort="updated", direction="desc")
+            pr_list = []
+            
+            for i, pr in enumerate(prs):
+                if i >= limit:
+                    break
+                
+                pr_summary = {
+                    "number": pr.number,
+                    "title": pr.title,
+                    "author": pr.user.login,
+                    "created_at": pr.created_at.isoformat(),
+                    "updated_at": pr.updated_at.isoformat(),
+                    "head_branch": pr.head.ref,
+                    "base_branch": pr.base.ref,
+                    "draft": pr.draft,
+                    "mergeable": pr.mergeable,
+                    "url": pr.html_url,
+                    "files_changed": pr.changed_files,
+                    "additions": pr.additions,
+                    "deletions": pr.deletions
+                }
+                pr_list.append(pr_summary)
+            
+            logger.info(f"Retrieved {len(pr_list)} open pull requests")
+            return pr_list
+            
+        except GithubException as e:
+            logger.error(f"GitHub API error listing PRs: {e}")
+            self.stats["operations_failed"] += 1
+            return []
+        except Exception as e:
+            logger.error(f"Failed to list PRs: {e}")
+            self.stats["operations_failed"] += 1
+            return []
+
     async def close(self):
         """Clean up GitHub client resources"""
         if self.github_client:

@@ -1,0 +1,772 @@
+2025-09-24 14:36:21,833 - __main__ - ERROR - Failed to import required modules: No module named 'psycopg2'
+2025-09-24 14:36:21,833 - __main__ - ERROR - Ensure all dependencies are installed and PYTHONPATH is set correctly
+2025-09-24 14:39:39,509 - __main__ - INFO - 🚀 Starting AI Agent Automation Hub Local Testing Suite
+2025-09-24 14:39:39,509 - __main__ - INFO - ================================================================================
+2025-09-24 14:39:39,509 - __main__ - INFO - 
+============================================================
+2025-09-24 14:39:39,509 - __main__ - INFO - 🧪 STARTING TEST: Environment Setup & Validation
+2025-09-24 14:39:39,509 - __main__ - INFO - ============================================================
+2025-09-24 14:39:39,509 - __main__ - INFO -   ▶️  Checking project structure...
+2025-09-24 14:39:39,509 - __main__ - INFO -   ▶️  Validating dev_bible structure...
+2025-09-24 14:39:39,510 - __main__ - INFO -   ▶️  Initializing test agents...
+2025-09-24 14:39:39,510 - agents.base_agent - INFO - Initialized TestSetupAgent (general) with dev_bible at /home/admin/Projects/dev-team/ai-agent-automation-hub/dev_bible
+2025-09-24 14:39:39,510 - agents.base_agent - INFO - BaseAgent TestSetupAgent initialized successfully
+2025-09-24 14:39:39,510 - __main__ - INFO -   ✅ SUCCESS: Environment setup completed successfully
+2025-09-24 14:39:39,510 - __main__ - INFO -      • available_dev_bible_files: 3
+2025-09-24 14:39:39,510 - __main__ - INFO -      • missing_dev_bible_files: 0
+2025-09-24 14:39:39,510 - __main__ - INFO -      • project_structure: valid
+2025-09-24 14:39:39,510 - __main__ - INFO - 
+============================================================
+2025-09-24 14:39:39,510 - __main__ - INFO - 🧪 STARTING TEST: DevBibleReader - Initialization and File Reading
+2025-09-24 14:39:39,510 - __main__ - INFO - ============================================================
+2025-09-24 14:39:39,510 - __main__ - INFO -   ▶️  Creating DevBibleReader instance...
+2025-09-24 14:39:39,510 - __main__ - INFO -   ▶️  Testing required reading retrieval...
+2025-09-24 14:39:39,510 - __main__ - INFO -   ▶️  Testing guidelines reading...
+2025-09-24 14:39:39,510 - utils.dev_bible_reader - INFO - Successfully read guidelines from core/coding_standards.md
+2025-09-24 14:39:39,510 - __main__ - INFO -   ▶️  Testing combined guidelines loading...
+2025-09-24 14:39:39,510 - utils.dev_bible_reader - INFO - Successfully read guidelines from core/coding_standards.md
+2025-09-24 14:39:39,510 - utils.dev_bible_reader - INFO - Successfully read guidelines from core/workflow_process.md
+2025-09-24 14:39:39,510 - utils.dev_bible_reader - INFO - Successfully read guidelines from automation_hub/architecture.md
+2025-09-24 14:39:39,510 - __main__ - INFO -   ✅ SUCCESS: DevBibleReader integration working correctly
+2025-09-24 14:39:39,510 - __main__ - INFO -      • backend_files_required: 3
+2025-09-24 14:39:39,510 - __main__ - INFO -      • combined_content_length: 5192
+2025-09-24 14:39:39,510 - __main__ - INFO -      • sample_files: ['core/coding_standards.md', 'core/workflow_process.md', 'automation_hub/architecture.md']
+2025-09-24 14:39:39,510 - __main__ - INFO - 
+============================================================
+2025-09-24 14:39:39,511 - __main__ - INFO - 🧪 STARTING TEST: @require_dev_bible_prep Decorator Functionality
+2025-09-24 14:39:39,511 - __main__ - INFO - ============================================================
+2025-09-24 14:39:39,511 - __main__ - INFO -   ▶️  Creating test agent with decorator methods...
+2025-09-24 14:39:39,511 - agents.base_agent - INFO - Initialized DecoratorTestAgent (backend) with dev_bible at /home/admin/Projects/dev-team/ai-agent-automation-hub/dev_bible
+2025-09-24 14:39:39,511 - agents.base_agent - INFO - BaseAgent DecoratorTestAgent initialized successfully
+2025-09-24 14:39:39,511 - __main__ - INFO -   ▶️  Testing method access without preparation...
+2025-09-24 14:39:39,511 - __main__ - INFO -   ▶️  ✓ Decorator correctly blocked access without preparation
+2025-09-24 14:39:39,511 - __main__ - INFO -   ▶️  Testing method access with preparation...
+2025-09-24 14:39:39,511 - agents.base_agent - INFO - Preparing DecoratorTestAgent for backend task: Test decorator functionality...
+2025-09-24 14:39:39,511 - utils.dev_bible_reader - INFO - Successfully read guidelines from core/coding_standards.md
+2025-09-24 14:39:39,511 - utils.dev_bible_reader - INFO - Successfully read guidelines from core/workflow_process.md
+2025-09-24 14:39:39,511 - utils.dev_bible_reader - INFO - Successfully read guidelines from automation_hub/architecture.md
+2025-09-24 14:39:39,511 - agents.base_agent - INFO - ✓ DecoratorTestAgent preparation complete for backend task. Loaded 5827 characters of guidelines.
+2025-09-24 14:39:39,511 - agents.base_agent - INFO - Executing protected_method for DecoratorTestAgent with proper preparation
+2025-09-24 14:39:39,511 - __main__ - INFO -   ✅ SUCCESS: Decorator functionality working correctly
+2025-09-24 14:39:39,511 - __main__ - INFO -      • preparation_blocking: working
+2025-09-24 14:39:39,511 - __main__ - INFO -      • post_preparation_access: working
+2025-09-24 14:39:39,511 - __main__ - INFO -      • unprotected_methods: working
+2025-09-24 14:39:39,511 - __main__ - INFO - 
+============================================================
+2025-09-24 14:39:39,511 - __main__ - INFO - 🧪 STARTING TEST: Backend Agent - Guidelines Access Validation
+2025-09-24 14:39:39,511 - __main__ - INFO - ============================================================
+2025-09-24 14:39:39,511 - __main__ - INFO -   ▶️  Creating CodeAgent (Backend specialization)...
+2025-09-24 14:39:39,511 - agents.base_agent - INFO - Initialized TestBackendAgent (backend) with dev_bible at /home/admin/Projects/dev-team/ai-agent-automation-hub/dev_bible
+2025-09-24 14:39:39,511 - agents.base_agent - INFO - BaseAgent TestBackendAgent initialized successfully
+2025-09-24 14:39:39,511 - agents.base_agent - INFO - CodeAgent TestBackendAgent initialized
+2025-09-24 14:39:39,511 - __main__ - INFO -   ▶️  Preparing agent for backend task...
+2025-09-24 14:39:39,511 - agents.base_agent - INFO - Preparing TestBackendAgent for backend task: Create a basic Flask hello world endpoint...
+2025-09-24 14:39:39,512 - utils.dev_bible_reader - INFO - Successfully read guidelines from core/coding_standards.md
+2025-09-24 14:39:39,512 - utils.dev_bible_reader - INFO - Successfully read guidelines from core/workflow_process.md
+2025-09-24 14:39:39,512 - utils.dev_bible_reader - INFO - Successfully read guidelines from automation_hub/architecture.md
+2025-09-24 14:39:39,512 - agents.base_agent - INFO - ✓ TestBackendAgent preparation complete for backend task. Loaded 5823 characters of guidelines.
+2025-09-24 14:39:39,512 - __main__ - INFO -   ▶️  Validating guidelines are loaded...
+2025-09-24 14:39:39,512 - __main__ - INFO -   ▶️  Testing coding standards validation...
+2025-09-24 14:39:39,512 - agents.base_agent - INFO - Executing validate_code_standards for TestBackendAgent with proper preparation
+2025-09-24 14:39:39,512 - agents.base_agent - INFO - Validating code standards for TestBackendAgent
+2025-09-24 14:39:39,512 - __main__ - INFO -   ✅ SUCCESS: Backend agent guidelines access working correctly
+2025-09-24 14:39:39,512 - __main__ - INFO -      • guidelines_loaded: True
+2025-09-24 14:39:39,512 - __main__ - INFO -      • guidelines_length: 6579
+2025-09-24 14:39:39,512 - __main__ - INFO -      • task_type: backend
+2025-09-24 14:39:39,512 - __main__ - INFO -      • validation_working: True
+2025-09-24 14:39:39,512 - __main__ - INFO - 
+============================================================
+2025-09-24 14:39:39,512 - __main__ - INFO - 🧪 STARTING TEST: Agent Task Preparation - Process Validation
+2025-09-24 14:39:39,512 - __main__ - INFO - ============================================================
+2025-09-24 14:39:39,512 - __main__ - INFO -   ▶️  Creating backend agent for task preparation test...
+2025-09-24 14:39:39,512 - agents.base_agent - INFO - Initialized TaskPrepAgent (backend) with dev_bible at /home/admin/Projects/dev-team/ai-agent-automation-hub/dev_bible
+2025-09-24 14:39:39,512 - agents.base_agent - INFO - BaseAgent TaskPrepAgent initialized successfully
+2025-09-24 14:39:39,512 - agents.base_agent - INFO - CodeAgent TaskPrepAgent initialized
+2025-09-24 14:39:39,512 - __main__ - INFO -   ▶️  Testing preparation process...
+2025-09-24 14:39:39,512 - agents.base_agent - INFO - Preparing TaskPrepAgent for backend task: Create a basic Flask hello world endpoint...
+2025-09-24 14:39:39,512 - utils.dev_bible_reader - INFO - Successfully read guidelines from core/coding_standards.md
+2025-09-24 14:39:39,512 - utils.dev_bible_reader - INFO - Successfully read guidelines from core/workflow_process.md
+2025-09-24 14:39:39,512 - utils.dev_bible_reader - INFO - Successfully read guidelines from automation_hub/architecture.md
+2025-09-24 14:39:39,512 - agents.base_agent - INFO - ✓ TaskPrepAgent preparation complete for backend task. Loaded 5817 characters of guidelines.
+2025-09-24 14:39:39,513 - __main__ - INFO -   ▶️  Validating agent status after preparation...
+2025-09-24 14:39:39,513 - __main__ - INFO -   ✅ SUCCESS: Task preparation process working correctly
+2025-09-24 14:39:39,513 - __main__ - INFO -      • preparation_complete: True
+2025-09-24 14:39:39,513 - __main__ - INFO -      • guidelines_loaded: True
+2025-09-24 14:39:39,513 - __main__ - INFO -      • task_type: backend
+2025-09-24 14:39:39,513 - __main__ - INFO -      • task_history_count: 1
+2025-09-24 14:39:39,513 - __main__ - INFO - 
+============================================================
+2025-09-24 14:39:39,513 - __main__ - INFO - 🧪 STARTING TEST: Guidelines Loading - Context Integration
+2025-09-24 14:39:39,513 - __main__ - INFO - ============================================================
+2025-09-24 14:39:39,513 - __main__ - INFO -   ▶️  Creating fresh agent for context testing...
+2025-09-24 14:39:39,513 - agents.base_agent - INFO - Initialized ContextTestAgent (testing) with dev_bible at /home/admin/Projects/dev-team/ai-agent-automation-hub/dev_bible
+2025-09-24 14:39:39,513 - agents.base_agent - INFO - BaseAgent ContextTestAgent initialized successfully
+2025-09-24 14:39:39,513 - __main__ - INFO -   ▶️  Preparing agent with testing guidelines...
+2025-09-24 14:39:39,513 - agents.base_agent - INFO - Preparing ContextTestAgent for testing task: Validate application functionality...
+2025-09-24 14:39:39,513 - utils.dev_bible_reader - INFO - Successfully read guidelines from core/coding_standards.md
+2025-09-24 14:39:39,513 - utils.dev_bible_reader - INFO - Successfully read guidelines from core/workflow_process.md
+2025-09-24 14:39:39,513 - agents.base_agent - INFO - ✓ ContextTestAgent preparation complete for testing task. Loaded 3757 characters of guidelines.
+2025-09-24 14:39:39,513 - __main__ - INFO -   ▶️  Extracting and validating guidelines context...
+2025-09-24 14:39:39,513 - __main__ - INFO -   ▶️  Testing context formatting...
+2025-09-24 14:39:39,513 - __main__ - INFO -   ✅ SUCCESS: Guidelines context loading working correctly
+2025-09-24 14:39:39,514 - __main__ - INFO -      • context_length: 4506
+2025-09-24 14:39:39,514 - __main__ - INFO -      • has_proper_headers: True
+2025-09-24 14:39:39,514 - __main__ - INFO -      • agent_name_included: True
+2025-09-24 14:39:39,514 - __main__ - INFO -      • task_type_included: True
+2025-09-24 14:39:39,514 - __main__ - INFO - 
+============================================================
+2025-09-24 14:39:39,514 - __main__ - INFO - 🧪 STARTING TEST: Task Completion Validation
+2025-09-24 14:39:39,514 - __main__ - INFO - ============================================================
+2025-09-24 14:39:39,514 - __main__ - INFO -   ▶️  Setting up agent for completion validation...
+2025-09-24 14:39:39,514 - agents.base_agent - INFO - Initialized ValidationTestAgent (general) with dev_bible at /home/admin/Projects/dev-team/ai-agent-automation-hub/dev_bible
+2025-09-24 14:39:39,514 - agents.base_agent - INFO - BaseAgent ValidationTestAgent initialized successfully
+2025-09-24 14:39:39,514 - agents.base_agent - INFO - Preparing ValidationTestAgent for pre_task task: Test task completion validation...
+2025-09-24 14:39:39,514 - utils.dev_bible_reader - INFO - Successfully read guidelines from core/_agent_quick_start.md
+2025-09-24 14:39:39,514 - utils.dev_bible_reader - INFO - Successfully read guidelines from automation_hub/current_priorities.md
+2025-09-24 14:39:39,514 - agents.base_agent - INFO - ✓ ValidationTestAgent preparation complete for pre_task task. Loaded 4079 characters of guidelines.
+2025-09-24 14:39:39,514 - __main__ - INFO -   ▶️  Testing successful task validation...
+2025-09-24 14:39:39,514 - agents.base_agent - INFO - Executing validate_task_completion for ValidationTestAgent with proper preparation
+2025-09-24 14:39:39,514 - agents.base_agent - INFO - Validating task completion for ValidationTestAgent
+2025-09-24 14:39:39,514 - agents.base_agent - INFO - Task validation complete for ValidationTestAgent: passed (3 checks, 0 failed, 0 warnings)
+2025-09-24 14:39:39,514 - __main__ - INFO -   ▶️  Testing validation with missing required fields...
+2025-09-24 14:39:39,514 - agents.base_agent - INFO - Executing validate_task_completion for ValidationTestAgent with proper preparation
+2025-09-24 14:39:39,514 - agents.base_agent - INFO - Validating task completion for ValidationTestAgent
+2025-09-24 14:39:39,514 - agents.base_agent - INFO - Task validation complete for ValidationTestAgent: failed (3 checks, 1 failed, 0 warnings)
+2025-09-24 14:39:39,514 - __main__ - INFO -   ✅ SUCCESS: Task completion validation working correctly
+2025-09-24 14:39:39,515 - __main__ - INFO -      • successful_validation: passed
+2025-09-24 14:39:39,515 - __main__ - INFO -      • compliance_checks_count: 3
+2025-09-24 14:39:39,515 - __main__ - INFO -      • incomplete_validation: failed
+2025-09-24 14:39:39,515 - __main__ - INFO -      • recommendations_provided: 0
+2025-09-24 14:39:39,515 - __main__ - INFO - 
+============================================================
+2025-09-24 14:39:39,515 - __main__ - INFO - 🧪 STARTING TEST: Discord Command Parsing
+2025-09-24 14:39:39,515 - __main__ - INFO - ============================================================
+2025-09-24 14:39:39,515 - __main__ - INFO -   ▶️  Creating OrchestratorAgent...
+2025-09-24 14:39:39,515 - agents.base_agent - INFO - Initialized TestOrchestrator (pre_task) with dev_bible at /home/admin/Projects/dev-team/ai-agent-automation-hub/dev_bible
+2025-09-24 14:39:39,515 - agents.base_agent - INFO - BaseAgent TestOrchestrator initialized successfully
+2025-09-24 14:39:39,515 - agents.orchestrator_agent - INFO - OrchestratorAgent TestOrchestrator initialized with task management capabilities
+2025-09-24 14:39:39,515 - agents.base_agent - INFO - Preparing TestOrchestrator for pre_task task: Parse and coordinate development tasks...
+2025-09-24 14:39:39,515 - utils.dev_bible_reader - INFO - Successfully read guidelines from core/_agent_quick_start.md
+2025-09-24 14:39:39,515 - utils.dev_bible_reader - INFO - Successfully read guidelines from automation_hub/current_priorities.md
+2025-09-24 14:39:39,515 - agents.base_agent - INFO - ✓ TestOrchestrator preparation complete for pre_task task. Loaded 4073 characters of guidelines.
+2025-09-24 14:39:39,515 - __main__ - INFO -   ▶️  Testing Discord command parsing...
+2025-09-24 14:39:39,515 - agents.base_agent - INFO - Executing parse_discord_command for TestOrchestrator with proper preparation
+2025-09-24 14:39:39,515 - agents.orchestrator_agent - INFO - Parsing Discord command for TestOrchestrator: /assign-task Create user login endpoint backend...
+2025-09-24 14:39:39,516 - agents.orchestrator_agent - INFO - ✓ Parsed command: assign | Complexity: moderate | Urgency: normal
+2025-09-24 14:39:39,517 - __main__ - ERROR -   ❌ FAILURE: Discord command parsing failed
+2025-09-24 14:39:39,517 - __main__ - ERROR -      Exception: 
+2025-09-24 14:39:39,517 - __main__ - ERROR -      Traceback: Traceback (most recent call last):
+  File "/home/admin/Projects/dev-team/ai-agent-automation-hub/test_agents_locally.py", line 580, in test_orchestrator_task_parsing
+    assert parsed_command['command_type'] in ['assign-task', 'assign_task', 'general']
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError
+
+2025-09-24 14:39:39,517 - __main__ - INFO - 
+============================================================
+2025-09-24 14:39:39,517 - __main__ - INFO - 🧪 STARTING TEST: Task Identification and Agent Assignment
+2025-09-24 14:39:39,517 - __main__ - INFO - ============================================================
+2025-09-24 14:39:39,517 - __main__ - INFO -   ▶️  Testing backend task identification...
+2025-09-24 14:39:39,517 - agents.base_agent - INFO - Executing break_down_task for TestOrchestrator with proper preparation
+2025-09-24 14:39:39,517 - agents.orchestrator_agent - INFO - Breaking down task for TestOrchestrator: Create user login endpoint backend
+2025-09-24 14:39:39,517 - agents.orchestrator_agent - INFO - ✓ Task broken down into 4 subtasks
+2025-09-24 14:39:39,517 - __main__ - INFO -   ▶️  Testing task assignment...
+2025-09-24 14:39:39,518 - agents.base_agent - INFO - Executing assign_to_agent for TestOrchestrator with proper preparation
+2025-09-24 14:39:39,518 - agents.orchestrator_agent - INFO - Assigning 4 subtasks to agents
+2025-09-24 14:39:39,518 - agents.orchestrator_agent - INFO - ✓ Assignment complete: 3 agent types, 0 conflicts, estimated time: 8 hours
+2025-09-24 14:39:39,518 - __main__ - INFO -   ▶️  Found 2 backend assignments
+2025-09-24 14:39:39,518 - __main__ - INFO -   ✅ SUCCESS: Task identification and assignment working correctly
+2025-09-24 14:39:39,518 - __main__ - INFO -      • subtasks_created: 4
+2025-09-24 14:39:39,518 - __main__ - INFO -      • backend_subtasks: 2
+2025-09-24 14:39:39,518 - __main__ - INFO -      • agent_types_involved: ['backend', 'testing', 'documentation']
+2025-09-24 14:39:39,519 - __main__ - INFO -      • total_estimated_time: 8 hours
+2025-09-24 14:39:39,519 - __main__ - INFO - 
+============================================================
+2025-09-24 14:39:39,519 - __main__ - INFO - 🧪 STARTING TEST: Task Complexity Assessment
+2025-09-24 14:39:39,519 - __main__ - INFO - ============================================================
+2025-09-24 14:39:39,519 - __main__ - INFO -   ▶️  Testing various complexity levels...
+2025-09-24 14:39:39,519 - agents.base_agent - INFO - Executing validate_task_complexity for TestOrchestrator with proper preparation
+2025-09-24 14:39:39,519 - agents.orchestrator_agent - INFO - Validating task complexity: Create simple hello world...
+2025-09-24 14:39:39,519 - __main__ - INFO -   ▶️  'Create simple hello world' -> simple
+2025-09-24 14:39:39,519 - agents.base_agent - INFO - Executing validate_task_complexity for TestOrchestrator with proper preparation
+2025-09-24 14:39:39,519 - agents.orchestrator_agent - INFO - Validating task complexity: Build user authentication API with database...
+2025-09-24 14:39:39,519 - __main__ - INFO -   ▶️  'Build user authentication API with database' -> moderate
+2025-09-24 14:39:39,519 - agents.base_agent - INFO - Executing validate_task_complexity for TestOrchestrator with proper preparation
+2025-09-24 14:39:39,519 - agents.orchestrator_agent - INFO - Validating task complexity: Design microservices architecture...
+2025-09-24 14:39:39,519 - __main__ - INFO -   ▶️  'Design microservices architecture' -> complex
+2025-09-24 14:39:39,519 - agents.base_agent - INFO - Executing validate_task_complexity for TestOrchestrator with proper preparation
+2025-09-24 14:39:39,519 - agents.orchestrator_agent - INFO - Validating task complexity: Do something...
+2025-09-24 14:39:39,519 - __main__ - INFO -   ▶️  'Do something' -> unclear
+2025-09-24 14:39:39,519 - __main__ - INFO -   ▶️  Testing clarification question generation...
+2025-09-24 14:39:39,519 - __main__ - INFO -   ✅ SUCCESS: Task complexity assessment working correctly
+2025-09-24 14:39:39,520 - __main__ - INFO -      • complexity_assessments: {'Create simple hello world': 'simple', 'Build user authentication API with database': 'moderate', 'Design microservices architecture': 'complex', 'Do something': 'unclear'}
+2025-09-24 14:39:39,520 - __main__ - INFO -      • clarification_questions_count: 1
+2025-09-24 14:39:39,520 - __main__ - INFO -      • sample_question: Could you provide more specific details about: Do something?
+2025-09-24 14:39:39,520 - __main__ - INFO - 
+============================================================
+2025-09-24 14:39:39,520 - __main__ - INFO - 🧪 STARTING TEST: End-to-End Workflow Simulation
+2025-09-24 14:39:39,520 - __main__ - INFO - ============================================================
+2025-09-24 14:39:39,520 - __main__ - INFO -   ▶️  Setting up workflow components...
+2025-09-24 14:39:39,520 - agents.base_agent - INFO - Initialized WorkflowOrchestrator (pre_task) with dev_bible at /home/admin/Projects/dev-team/ai-agent-automation-hub/dev_bible
+2025-09-24 14:39:39,520 - agents.base_agent - INFO - BaseAgent WorkflowOrchestrator initialized successfully
+2025-09-24 14:39:39,520 - agents.orchestrator_agent - INFO - OrchestratorAgent WorkflowOrchestrator initialized with task management capabilities
+2025-09-24 14:39:39,520 - agents.base_agent - INFO - Initialized WorkflowBackendAgent (backend) with dev_bible at /home/admin/Projects/dev-team/ai-agent-automation-hub/dev_bible
+2025-09-24 14:39:39,520 - agents.base_agent - INFO - BaseAgent WorkflowBackendAgent initialized successfully
+2025-09-24 14:39:39,520 - agents.base_agent - INFO - CodeAgent WorkflowBackendAgent initialized
+2025-09-24 14:39:39,520 - agents.base_agent - INFO - Preparing WorkflowOrchestrator for pre_task task: Coordinate development workflow...
+2025-09-24 14:39:39,520 - utils.dev_bible_reader - INFO - Successfully read guidelines from core/_agent_quick_start.md
+2025-09-24 14:39:39,521 - utils.dev_bible_reader - INFO - Successfully read guidelines from automation_hub/current_priorities.md
+2025-09-24 14:39:39,521 - agents.base_agent - INFO - ✓ WorkflowOrchestrator preparation complete for pre_task task. Loaded 4081 characters of guidelines.
+2025-09-24 14:39:39,521 - agents.base_agent - INFO - Preparing WorkflowBackendAgent for backend task: Execute backend development tasks...
+2025-09-24 14:39:39,521 - utils.dev_bible_reader - INFO - Successfully read guidelines from core/coding_standards.md
+2025-09-24 14:39:39,521 - utils.dev_bible_reader - INFO - Successfully read guidelines from core/workflow_process.md
+2025-09-24 14:39:39,521 - utils.dev_bible_reader - INFO - Successfully read guidelines from automation_hub/architecture.md
+2025-09-24 14:39:39,521 - agents.base_agent - INFO - ✓ WorkflowBackendAgent preparation complete for backend task. Loaded 5831 characters of guidelines.
+2025-09-24 14:39:39,521 - __main__ - INFO -   ▶️  Step 1: OrchestratorAgent receives task...
+2025-09-24 14:39:39,521 - agents.base_agent - INFO - Executing parse_discord_command for WorkflowOrchestrator with proper preparation
+2025-09-24 14:39:39,521 - agents.orchestrator_agent - INFO - Parsing Discord command for WorkflowOrchestrator: !create Create a basic Flask hello world endpoint...
+2025-09-24 14:39:39,521 - agents.orchestrator_agent - INFO - ✓ Parsed command: create | Complexity: simple | Urgency: normal
+2025-09-24 14:39:39,521 - __main__ - INFO -   ▶️  Step 2: Task breakdown and assignment...
+2025-09-24 14:39:39,521 - agents.base_agent - INFO - Executing break_down_task for WorkflowOrchestrator with proper preparation
+2025-09-24 14:39:39,522 - agents.orchestrator_agent - INFO - Breaking down task for WorkflowOrchestrator: Create a basic Flask hello world endpoint
+2025-09-24 14:39:39,522 - agents.orchestrator_agent - INFO - ✓ Task broken down into 4 subtasks
+2025-09-24 14:39:39,522 - agents.base_agent - INFO - Executing assign_to_agent for WorkflowOrchestrator with proper preparation
+2025-09-24 14:39:39,522 - agents.orchestrator_agent - INFO - Assigning 4 subtasks to agents
+2025-09-24 14:39:39,522 - agents.orchestrator_agent - INFO - ✓ Assignment complete: 3 agent types, 0 conflicts, estimated time: 8 hours
+2025-09-24 14:39:39,522 - __main__ - INFO -   ▶️  Step 3: BackendAgent prepares with dev bible...
+2025-09-24 14:39:39,522 - __main__ - INFO -   ▶️  Step 4: BackendAgent simulates code creation...
+2025-09-24 14:39:39,522 - __main__ - INFO -   ▶️  Step 5: Task validation and completion...
+2025-09-24 14:39:39,522 - agents.base_agent - INFO - Executing validate_task_completion for WorkflowBackendAgent with proper preparation
+2025-09-24 14:39:39,522 - agents.base_agent - INFO - Validating task completion for WorkflowBackendAgent
+2025-09-24 14:39:39,522 - agents.base_agent - INFO - Task validation complete for WorkflowBackendAgent: passed (3 checks, 0 failed, 0 warnings)
+2025-09-24 14:39:39,522 - __main__ - INFO -   ▶️  Step 6: Workflow completion summary...
+2025-09-24 14:39:39,522 - __main__ - INFO -   ✅ SUCCESS: End-to-end workflow simulation completed successfully
+2025-09-24 14:39:39,522 - __main__ - INFO -      • original_task: Create a basic Flask hello world endpoint
+2025-09-24 14:39:39,522 - __main__ - INFO -      • parsed_successfully: True
+2025-09-24 14:39:39,522 - __main__ - INFO -      • subtasks_created: 4
+2025-09-24 14:39:39,522 - __main__ - INFO -      • backend_assignments: 2
+2025-09-24 14:39:39,522 - __main__ - INFO -      • agent_preparation: completed
+2025-09-24 14:39:39,522 - __main__ - INFO -      • code_generation: simulated
+2025-09-24 14:39:39,522 - __main__ - INFO -      • validation_status: passed
+2025-09-24 14:39:39,522 - __main__ - INFO -      • files_created: 3
+2025-09-24 14:39:39,522 - __main__ - INFO -      • workflow_duration: < 1 second (simulated)
+2025-09-24 14:39:39,522 - __main__ - INFO - 
+============================================================
+2025-09-24 14:39:39,523 - __main__ - INFO - 🧪 STARTING TEST: Test Environment Cleanup
+2025-09-24 14:39:39,523 - __main__ - INFO - ============================================================
+2025-09-24 14:39:39,523 - __main__ - INFO -   ▶️  Cleaning up test resources...
+2025-09-24 14:39:39,523 - __main__ - INFO -   ✅ SUCCESS: Test environment cleanup completed
+2025-09-24 14:39:39,523 - __main__ - INFO -      • temporary_files_removed: 0
+2025-09-24 14:39:39,523 - __main__ - INFO -      • agents_reset: 0
+2025-09-24 14:39:39,523 - __main__ - INFO -      • connections_closed: 0
+2025-09-24 14:40:08,641 - __main__ - INFO - 🚀 Starting AI Agent Automation Hub Local Testing Suite
+2025-09-24 14:40:08,642 - __main__ - INFO - ================================================================================
+2025-09-24 14:40:08,642 - __main__ - INFO - 
+============================================================
+2025-09-24 14:40:08,642 - __main__ - INFO - 🧪 STARTING TEST: Environment Setup & Validation
+2025-09-24 14:40:08,642 - __main__ - INFO - ============================================================
+2025-09-24 14:40:08,642 - __main__ - INFO -   ▶️  Checking project structure...
+2025-09-24 14:40:08,642 - __main__ - INFO -   ▶️  Validating dev_bible structure...
+2025-09-24 14:40:08,643 - __main__ - INFO -   ▶️  Initializing test agents...
+2025-09-24 14:40:08,643 - agents.base_agent - INFO - Initialized TestSetupAgent (general) with dev_bible at /home/admin/Projects/dev-team/ai-agent-automation-hub/dev_bible
+2025-09-24 14:40:08,643 - agents.base_agent - INFO - BaseAgent TestSetupAgent initialized successfully
+2025-09-24 14:40:08,643 - __main__ - INFO -   ✅ SUCCESS: Environment setup completed successfully
+2025-09-24 14:40:08,643 - __main__ - INFO -      • available_dev_bible_files: 3
+2025-09-24 14:40:08,643 - __main__ - INFO -      • missing_dev_bible_files: 0
+2025-09-24 14:40:08,643 - __main__ - INFO -      • project_structure: valid
+2025-09-24 14:40:08,643 - __main__ - INFO - 
+============================================================
+2025-09-24 14:40:08,644 - __main__ - INFO - 🧪 STARTING TEST: DevBibleReader - Initialization and File Reading
+2025-09-24 14:40:08,644 - __main__ - INFO - ============================================================
+2025-09-24 14:40:08,644 - __main__ - INFO -   ▶️  Creating DevBibleReader instance...
+2025-09-24 14:40:08,644 - __main__ - INFO -   ▶️  Testing required reading retrieval...
+2025-09-24 14:40:08,644 - __main__ - INFO -   ▶️  Testing guidelines reading...
+2025-09-24 14:40:08,644 - utils.dev_bible_reader - INFO - Successfully read guidelines from core/coding_standards.md
+2025-09-24 14:40:08,644 - __main__ - INFO -   ▶️  Testing combined guidelines loading...
+2025-09-24 14:40:08,644 - utils.dev_bible_reader - INFO - Successfully read guidelines from core/coding_standards.md
+2025-09-24 14:40:08,645 - utils.dev_bible_reader - INFO - Successfully read guidelines from core/workflow_process.md
+2025-09-24 14:40:08,645 - utils.dev_bible_reader - INFO - Successfully read guidelines from automation_hub/architecture.md
+2025-09-24 14:40:08,645 - __main__ - INFO -   ✅ SUCCESS: DevBibleReader integration working correctly
+2025-09-24 14:40:08,645 - __main__ - INFO -      • backend_files_required: 3
+2025-09-24 14:40:08,645 - __main__ - INFO -      • combined_content_length: 5192
+2025-09-24 14:40:08,645 - __main__ - INFO -      • sample_files: ['core/coding_standards.md', 'core/workflow_process.md', 'automation_hub/architecture.md']
+2025-09-24 14:40:08,645 - __main__ - INFO - 
+============================================================
+2025-09-24 14:40:08,645 - __main__ - INFO - 🧪 STARTING TEST: @require_dev_bible_prep Decorator Functionality
+2025-09-24 14:40:08,646 - __main__ - INFO - ============================================================
+2025-09-24 14:40:08,646 - __main__ - INFO -   ▶️  Creating test agent with decorator methods...
+2025-09-24 14:40:08,646 - agents.base_agent - INFO - Initialized DecoratorTestAgent (backend) with dev_bible at /home/admin/Projects/dev-team/ai-agent-automation-hub/dev_bible
+2025-09-24 14:40:08,646 - agents.base_agent - INFO - BaseAgent DecoratorTestAgent initialized successfully
+2025-09-24 14:40:08,646 - __main__ - INFO -   ▶️  Testing method access without preparation...
+2025-09-24 14:40:08,646 - __main__ - INFO -   ▶️  ✓ Decorator correctly blocked access without preparation
+2025-09-24 14:40:08,646 - __main__ - INFO -   ▶️  Testing method access with preparation...
+2025-09-24 14:40:08,646 - agents.base_agent - INFO - Preparing DecoratorTestAgent for backend task: Test decorator functionality...
+2025-09-24 14:40:08,647 - utils.dev_bible_reader - INFO - Successfully read guidelines from core/coding_standards.md
+2025-09-24 14:40:08,647 - utils.dev_bible_reader - INFO - Successfully read guidelines from core/workflow_process.md
+2025-09-24 14:40:08,647 - utils.dev_bible_reader - INFO - Successfully read guidelines from automation_hub/architecture.md
+2025-09-24 14:40:08,647 - agents.base_agent - INFO - ✓ DecoratorTestAgent preparation complete for backend task. Loaded 5827 characters of guidelines.
+2025-09-24 14:40:08,647 - agents.base_agent - INFO - Executing protected_method for DecoratorTestAgent with proper preparation
+2025-09-24 14:40:08,647 - __main__ - INFO -   ✅ SUCCESS: Decorator functionality working correctly
+2025-09-24 14:40:08,647 - __main__ - INFO -      • preparation_blocking: working
+2025-09-24 14:40:08,648 - __main__ - INFO -      • post_preparation_access: working
+2025-09-24 14:40:08,648 - __main__ - INFO -      • unprotected_methods: working
+2025-09-24 14:40:08,648 - __main__ - INFO - 
+============================================================
+2025-09-24 14:40:08,648 - __main__ - INFO - 🧪 STARTING TEST: Backend Agent - Guidelines Access Validation
+2025-09-24 14:40:08,648 - __main__ - INFO - ============================================================
+2025-09-24 14:40:08,648 - __main__ - INFO -   ▶️  Creating CodeAgent (Backend specialization)...
+2025-09-24 14:40:08,648 - agents.base_agent - INFO - Initialized TestBackendAgent (backend) with dev_bible at /home/admin/Projects/dev-team/ai-agent-automation-hub/dev_bible
+2025-09-24 14:40:08,648 - agents.base_agent - INFO - BaseAgent TestBackendAgent initialized successfully
+2025-09-24 14:40:08,649 - agents.base_agent - INFO - CodeAgent TestBackendAgent initialized
+2025-09-24 14:40:08,649 - __main__ - INFO -   ▶️  Preparing agent for backend task...
+2025-09-24 14:40:08,649 - agents.base_agent - INFO - Preparing TestBackendAgent for backend task: Create a basic Flask hello world endpoint...
+2025-09-24 14:40:08,649 - utils.dev_bible_reader - INFO - Successfully read guidelines from core/coding_standards.md
+2025-09-24 14:40:08,649 - utils.dev_bible_reader - INFO - Successfully read guidelines from core/workflow_process.md
+2025-09-24 14:40:08,649 - utils.dev_bible_reader - INFO - Successfully read guidelines from automation_hub/architecture.md
+2025-09-24 14:40:08,649 - agents.base_agent - INFO - ✓ TestBackendAgent preparation complete for backend task. Loaded 5823 characters of guidelines.
+2025-09-24 14:40:08,649 - __main__ - INFO -   ▶️  Validating guidelines are loaded...
+2025-09-24 14:40:08,650 - __main__ - INFO -   ▶️  Testing coding standards validation...
+2025-09-24 14:40:08,650 - agents.base_agent - INFO - Executing validate_code_standards for TestBackendAgent with proper preparation
+2025-09-24 14:40:08,650 - agents.base_agent - INFO - Validating code standards for TestBackendAgent
+2025-09-24 14:40:08,650 - __main__ - INFO -   ✅ SUCCESS: Backend agent guidelines access working correctly
+2025-09-24 14:40:08,650 - __main__ - INFO -      • guidelines_loaded: True
+2025-09-24 14:40:08,650 - __main__ - INFO -      • guidelines_length: 6579
+2025-09-24 14:40:08,650 - __main__ - INFO -      • task_type: backend
+2025-09-24 14:40:08,650 - __main__ - INFO -      • validation_working: True
+2025-09-24 14:40:08,651 - __main__ - INFO - 
+============================================================
+2025-09-24 14:40:08,651 - __main__ - INFO - 🧪 STARTING TEST: Agent Task Preparation - Process Validation
+2025-09-24 14:40:08,651 - __main__ - INFO - ============================================================
+2025-09-24 14:40:08,651 - __main__ - INFO -   ▶️  Creating backend agent for task preparation test...
+2025-09-24 14:40:08,651 - agents.base_agent - INFO - Initialized TaskPrepAgent (backend) with dev_bible at /home/admin/Projects/dev-team/ai-agent-automation-hub/dev_bible
+2025-09-24 14:40:08,651 - agents.base_agent - INFO - BaseAgent TaskPrepAgent initialized successfully
+2025-09-24 14:40:08,651 - agents.base_agent - INFO - CodeAgent TaskPrepAgent initialized
+2025-09-24 14:40:08,651 - __main__ - INFO -   ▶️  Testing preparation process...
+2025-09-24 14:40:08,651 - agents.base_agent - INFO - Preparing TaskPrepAgent for backend task: Create a basic Flask hello world endpoint...
+2025-09-24 14:40:08,651 - utils.dev_bible_reader - INFO - Successfully read guidelines from core/coding_standards.md
+2025-09-24 14:40:08,651 - utils.dev_bible_reader - INFO - Successfully read guidelines from core/workflow_process.md
+2025-09-24 14:40:08,652 - utils.dev_bible_reader - INFO - Successfully read guidelines from automation_hub/architecture.md
+2025-09-24 14:40:08,652 - agents.base_agent - INFO - ✓ TaskPrepAgent preparation complete for backend task. Loaded 5817 characters of guidelines.
+2025-09-24 14:40:08,652 - __main__ - INFO -   ▶️  Validating agent status after preparation...
+2025-09-24 14:40:08,652 - __main__ - INFO -   ✅ SUCCESS: Task preparation process working correctly
+2025-09-24 14:40:08,652 - __main__ - INFO -      • preparation_complete: True
+2025-09-24 14:40:08,652 - __main__ - INFO -      • guidelines_loaded: True
+2025-09-24 14:40:08,652 - __main__ - INFO -      • task_type: backend
+2025-09-24 14:40:08,652 - __main__ - INFO -      • task_history_count: 1
+2025-09-24 14:40:08,652 - __main__ - INFO - 
+============================================================
+2025-09-24 14:40:08,652 - __main__ - INFO - 🧪 STARTING TEST: Guidelines Loading - Context Integration
+2025-09-24 14:40:08,652 - __main__ - INFO - ============================================================
+2025-09-24 14:40:08,652 - __main__ - INFO -   ▶️  Creating fresh agent for context testing...
+2025-09-24 14:40:08,652 - agents.base_agent - INFO - Initialized ContextTestAgent (testing) with dev_bible at /home/admin/Projects/dev-team/ai-agent-automation-hub/dev_bible
+2025-09-24 14:40:08,652 - agents.base_agent - INFO - BaseAgent ContextTestAgent initialized successfully
+2025-09-24 14:40:08,652 - __main__ - INFO -   ▶️  Preparing agent with testing guidelines...
+2025-09-24 14:40:08,652 - agents.base_agent - INFO - Preparing ContextTestAgent for testing task: Validate application functionality...
+2025-09-24 14:40:08,652 - utils.dev_bible_reader - INFO - Successfully read guidelines from core/coding_standards.md
+2025-09-24 14:40:08,652 - utils.dev_bible_reader - INFO - Successfully read guidelines from core/workflow_process.md
+2025-09-24 14:40:08,652 - agents.base_agent - INFO - ✓ ContextTestAgent preparation complete for testing task. Loaded 3757 characters of guidelines.
+2025-09-24 14:40:08,652 - __main__ - INFO -   ▶️  Extracting and validating guidelines context...
+2025-09-24 14:40:08,652 - __main__ - INFO -   ▶️  Testing context formatting...
+2025-09-24 14:40:08,652 - __main__ - INFO -   ✅ SUCCESS: Guidelines context loading working correctly
+2025-09-24 14:40:08,652 - __main__ - INFO -      • context_length: 4506
+2025-09-24 14:40:08,652 - __main__ - INFO -      • has_proper_headers: True
+2025-09-24 14:40:08,652 - __main__ - INFO -      • agent_name_included: True
+2025-09-24 14:40:08,652 - __main__ - INFO -      • task_type_included: True
+2025-09-24 14:40:08,652 - __main__ - INFO - 
+============================================================
+2025-09-24 14:40:08,652 - __main__ - INFO - 🧪 STARTING TEST: Task Completion Validation
+2025-09-24 14:40:08,653 - __main__ - INFO - ============================================================
+2025-09-24 14:40:08,653 - __main__ - INFO -   ▶️  Setting up agent for completion validation...
+2025-09-24 14:40:08,653 - agents.base_agent - INFO - Initialized ValidationTestAgent (general) with dev_bible at /home/admin/Projects/dev-team/ai-agent-automation-hub/dev_bible
+2025-09-24 14:40:08,653 - agents.base_agent - INFO - BaseAgent ValidationTestAgent initialized successfully
+2025-09-24 14:40:08,653 - agents.base_agent - INFO - Preparing ValidationTestAgent for pre_task task: Test task completion validation...
+2025-09-24 14:40:08,653 - utils.dev_bible_reader - INFO - Successfully read guidelines from core/_agent_quick_start.md
+2025-09-24 14:40:08,653 - utils.dev_bible_reader - INFO - Successfully read guidelines from automation_hub/current_priorities.md
+2025-09-24 14:40:08,653 - agents.base_agent - INFO - ✓ ValidationTestAgent preparation complete for pre_task task. Loaded 4079 characters of guidelines.
+2025-09-24 14:40:08,653 - __main__ - INFO -   ▶️  Testing successful task validation...
+2025-09-24 14:40:08,653 - agents.base_agent - INFO - Executing validate_task_completion for ValidationTestAgent with proper preparation
+2025-09-24 14:40:08,653 - agents.base_agent - INFO - Validating task completion for ValidationTestAgent
+2025-09-24 14:40:08,653 - agents.base_agent - INFO - Task validation complete for ValidationTestAgent: passed (3 checks, 0 failed, 0 warnings)
+2025-09-24 14:40:08,653 - __main__ - INFO -   ▶️  Testing validation with missing required fields...
+2025-09-24 14:40:08,653 - agents.base_agent - INFO - Executing validate_task_completion for ValidationTestAgent with proper preparation
+2025-09-24 14:40:08,653 - agents.base_agent - INFO - Validating task completion for ValidationTestAgent
+2025-09-24 14:40:08,653 - agents.base_agent - INFO - Task validation complete for ValidationTestAgent: failed (3 checks, 1 failed, 0 warnings)
+2025-09-24 14:40:08,653 - __main__ - INFO -   ✅ SUCCESS: Task completion validation working correctly
+2025-09-24 14:40:08,653 - __main__ - INFO -      • successful_validation: passed
+2025-09-24 14:40:08,653 - __main__ - INFO -      • compliance_checks_count: 3
+2025-09-24 14:40:08,653 - __main__ - INFO -      • incomplete_validation: failed
+2025-09-24 14:40:08,653 - __main__ - INFO -      • recommendations_provided: 0
+2025-09-24 14:40:08,654 - __main__ - INFO - 
+============================================================
+2025-09-24 14:40:08,654 - __main__ - INFO - 🧪 STARTING TEST: Discord Command Parsing
+2025-09-24 14:40:08,654 - __main__ - INFO - ============================================================
+2025-09-24 14:40:08,654 - __main__ - INFO -   ▶️  Creating OrchestratorAgent...
+2025-09-24 14:40:08,654 - agents.base_agent - INFO - Initialized TestOrchestrator (pre_task) with dev_bible at /home/admin/Projects/dev-team/ai-agent-automation-hub/dev_bible
+2025-09-24 14:40:08,654 - agents.base_agent - INFO - BaseAgent TestOrchestrator initialized successfully
+2025-09-24 14:40:08,654 - agents.orchestrator_agent - INFO - OrchestratorAgent TestOrchestrator initialized with task management capabilities
+2025-09-24 14:40:08,654 - agents.base_agent - INFO - Preparing TestOrchestrator for pre_task task: Parse and coordinate development tasks...
+2025-09-24 14:40:08,654 - utils.dev_bible_reader - INFO - Successfully read guidelines from core/_agent_quick_start.md
+2025-09-24 14:40:08,654 - utils.dev_bible_reader - INFO - Successfully read guidelines from automation_hub/current_priorities.md
+2025-09-24 14:40:08,654 - agents.base_agent - INFO - ✓ TestOrchestrator preparation complete for pre_task task. Loaded 4073 characters of guidelines.
+2025-09-24 14:40:08,654 - __main__ - INFO -   ▶️  Testing Discord command parsing...
+2025-09-24 14:40:08,654 - agents.base_agent - INFO - Executing parse_discord_command for TestOrchestrator with proper preparation
+2025-09-24 14:40:08,654 - agents.orchestrator_agent - INFO - Parsing Discord command for TestOrchestrator: /assign-task Create user login endpoint backend...
+2025-09-24 14:40:08,655 - agents.orchestrator_agent - INFO - ✓ Parsed command: assign | Complexity: moderate | Urgency: normal
+2025-09-24 14:40:08,655 - __main__ - INFO -   ▶️  Testing complexity assessment...
+2025-09-24 14:40:08,655 - __main__ - INFO -   ✅ SUCCESS: Discord command parsing working correctly
+2025-09-24 14:40:08,655 - __main__ - INFO -      • command_type: assign
+2025-09-24 14:40:08,655 - __main__ - INFO -      • task_description_extracted: True
+2025-09-24 14:40:08,655 - __main__ - INFO -      • complexity_assessed: moderate
+2025-09-24 14:40:08,655 - __main__ - INFO -      • urgency_assessed: normal
+2025-09-24 14:40:08,655 - __main__ - INFO - 
+============================================================
+2025-09-24 14:40:08,655 - __main__ - INFO - 🧪 STARTING TEST: Task Identification and Agent Assignment
+2025-09-24 14:40:08,655 - __main__ - INFO - ============================================================
+2025-09-24 14:40:08,656 - __main__ - INFO -   ▶️  Testing backend task identification...
+2025-09-24 14:40:08,656 - agents.base_agent - INFO - Executing break_down_task for TestOrchestrator with proper preparation
+2025-09-24 14:40:08,656 - agents.orchestrator_agent - INFO - Breaking down task for TestOrchestrator: Create user login endpoint backend
+2025-09-24 14:40:08,656 - agents.orchestrator_agent - INFO - ✓ Task broken down into 4 subtasks
+2025-09-24 14:40:08,656 - __main__ - INFO -   ▶️  Testing task assignment...
+2025-09-24 14:40:08,656 - agents.base_agent - INFO - Executing assign_to_agent for TestOrchestrator with proper preparation
+2025-09-24 14:40:08,656 - agents.orchestrator_agent - INFO - Assigning 4 subtasks to agents
+2025-09-24 14:40:08,656 - agents.orchestrator_agent - INFO - ✓ Assignment complete: 3 agent types, 0 conflicts, estimated time: 8 hours
+2025-09-24 14:40:08,656 - __main__ - INFO -   ▶️  Found 2 backend assignments
+2025-09-24 14:40:08,656 - __main__ - INFO -   ✅ SUCCESS: Task identification and assignment working correctly
+2025-09-24 14:40:08,656 - __main__ - INFO -      • subtasks_created: 4
+2025-09-24 14:40:08,656 - __main__ - INFO -      • backend_subtasks: 2
+2025-09-24 14:40:08,656 - __main__ - INFO -      • agent_types_involved: ['backend', 'testing', 'documentation']
+2025-09-24 14:40:08,656 - __main__ - INFO -      • total_estimated_time: 8 hours
+2025-09-24 14:40:08,656 - __main__ - INFO - 
+============================================================
+2025-09-24 14:40:08,656 - __main__ - INFO - 🧪 STARTING TEST: Task Complexity Assessment
+2025-09-24 14:40:08,656 - __main__ - INFO - ============================================================
+2025-09-24 14:40:08,656 - __main__ - INFO -   ▶️  Testing various complexity levels...
+2025-09-24 14:40:08,656 - agents.base_agent - INFO - Executing validate_task_complexity for TestOrchestrator with proper preparation
+2025-09-24 14:40:08,656 - agents.orchestrator_agent - INFO - Validating task complexity: Create simple hello world...
+2025-09-24 14:40:08,656 - __main__ - INFO -   ▶️  'Create simple hello world' -> simple
+2025-09-24 14:40:08,657 - agents.base_agent - INFO - Executing validate_task_complexity for TestOrchestrator with proper preparation
+2025-09-24 14:40:08,657 - agents.orchestrator_agent - INFO - Validating task complexity: Build user authentication API with database...
+2025-09-24 14:40:08,657 - __main__ - INFO -   ▶️  'Build user authentication API with database' -> moderate
+2025-09-24 14:40:08,657 - agents.base_agent - INFO - Executing validate_task_complexity for TestOrchestrator with proper preparation
+2025-09-24 14:40:08,657 - agents.orchestrator_agent - INFO - Validating task complexity: Design microservices architecture...
+2025-09-24 14:40:08,657 - __main__ - INFO -   ▶️  'Design microservices architecture' -> complex
+2025-09-24 14:40:08,657 - agents.base_agent - INFO - Executing validate_task_complexity for TestOrchestrator with proper preparation
+2025-09-24 14:40:08,657 - agents.orchestrator_agent - INFO - Validating task complexity: Do something...
+2025-09-24 14:40:08,657 - __main__ - INFO -   ▶️  'Do something' -> unclear
+2025-09-24 14:40:08,657 - __main__ - INFO -   ▶️  Testing clarification question generation...
+2025-09-24 14:40:08,657 - __main__ - INFO -   ✅ SUCCESS: Task complexity assessment working correctly
+2025-09-24 14:40:08,657 - __main__ - INFO -      • complexity_assessments: {'Create simple hello world': 'simple', 'Build user authentication API with database': 'moderate', 'Design microservices architecture': 'complex', 'Do something': 'unclear'}
+2025-09-24 14:40:08,657 - __main__ - INFO -      • clarification_questions_count: 1
+2025-09-24 14:40:08,657 - __main__ - INFO -      • sample_question: Could you provide more specific details about: Do something?
+2025-09-24 14:40:08,657 - __main__ - INFO - 
+============================================================
+2025-09-24 14:40:08,657 - __main__ - INFO - 🧪 STARTING TEST: End-to-End Workflow Simulation
+2025-09-24 14:40:08,657 - __main__ - INFO - ============================================================
+2025-09-24 14:40:08,657 - __main__ - INFO -   ▶️  Setting up workflow components...
+2025-09-24 14:40:08,657 - agents.base_agent - INFO - Initialized WorkflowOrchestrator (pre_task) with dev_bible at /home/admin/Projects/dev-team/ai-agent-automation-hub/dev_bible
+2025-09-24 14:40:08,657 - agents.base_agent - INFO - BaseAgent WorkflowOrchestrator initialized successfully
+2025-09-24 14:40:08,657 - agents.orchestrator_agent - INFO - OrchestratorAgent WorkflowOrchestrator initialized with task management capabilities
+2025-09-24 14:40:08,657 - agents.base_agent - INFO - Initialized WorkflowBackendAgent (backend) with dev_bible at /home/admin/Projects/dev-team/ai-agent-automation-hub/dev_bible
+2025-09-24 14:40:08,657 - agents.base_agent - INFO - BaseAgent WorkflowBackendAgent initialized successfully
+2025-09-24 14:40:08,657 - agents.base_agent - INFO - CodeAgent WorkflowBackendAgent initialized
+2025-09-24 14:40:08,657 - agents.base_agent - INFO - Preparing WorkflowOrchestrator for pre_task task: Coordinate development workflow...
+2025-09-24 14:40:08,658 - utils.dev_bible_reader - INFO - Successfully read guidelines from core/_agent_quick_start.md
+2025-09-24 14:40:08,658 - utils.dev_bible_reader - INFO - Successfully read guidelines from automation_hub/current_priorities.md
+2025-09-24 14:40:08,658 - agents.base_agent - INFO - ✓ WorkflowOrchestrator preparation complete for pre_task task. Loaded 4081 characters of guidelines.
+2025-09-24 14:40:08,658 - agents.base_agent - INFO - Preparing WorkflowBackendAgent for backend task: Execute backend development tasks...
+2025-09-24 14:40:08,658 - utils.dev_bible_reader - INFO - Successfully read guidelines from core/coding_standards.md
+2025-09-24 14:40:08,658 - utils.dev_bible_reader - INFO - Successfully read guidelines from core/workflow_process.md
+2025-09-24 14:40:08,658 - utils.dev_bible_reader - INFO - Successfully read guidelines from automation_hub/architecture.md
+2025-09-24 14:40:08,661 - agents.base_agent - INFO - ✓ WorkflowBackendAgent preparation complete for backend task. Loaded 5831 characters of guidelines.
+2025-09-24 14:40:08,661 - __main__ - INFO -   ▶️  Step 1: OrchestratorAgent receives task...
+2025-09-24 14:40:08,661 - agents.base_agent - INFO - Executing parse_discord_command for WorkflowOrchestrator with proper preparation
+2025-09-24 14:40:08,661 - agents.orchestrator_agent - INFO - Parsing Discord command for WorkflowOrchestrator: !create Create a basic Flask hello world endpoint...
+2025-09-24 14:40:08,661 - agents.orchestrator_agent - INFO - ✓ Parsed command: create | Complexity: simple | Urgency: normal
+2025-09-24 14:40:08,661 - __main__ - INFO -   ▶️  Step 2: Task breakdown and assignment...
+2025-09-24 14:40:08,661 - agents.base_agent - INFO - Executing break_down_task for WorkflowOrchestrator with proper preparation
+2025-09-24 14:40:08,661 - agents.orchestrator_agent - INFO - Breaking down task for WorkflowOrchestrator: Create a basic Flask hello world endpoint
+2025-09-24 14:40:08,661 - agents.orchestrator_agent - INFO - ✓ Task broken down into 4 subtasks
+2025-09-24 14:40:08,661 - agents.base_agent - INFO - Executing assign_to_agent for WorkflowOrchestrator with proper preparation
+2025-09-24 14:40:08,661 - agents.orchestrator_agent - INFO - Assigning 4 subtasks to agents
+2025-09-24 14:40:08,661 - agents.orchestrator_agent - INFO - ✓ Assignment complete: 3 agent types, 0 conflicts, estimated time: 8 hours
+2025-09-24 14:40:08,661 - __main__ - INFO -   ▶️  Step 3: BackendAgent prepares with dev bible...
+2025-09-24 14:40:08,662 - __main__ - INFO -   ▶️  Step 4: BackendAgent simulates code creation...
+2025-09-24 14:40:08,662 - __main__ - INFO -   ▶️  Step 5: Task validation and completion...
+2025-09-24 14:40:08,662 - agents.base_agent - INFO - Executing validate_task_completion for WorkflowBackendAgent with proper preparation
+2025-09-24 14:40:08,662 - agents.base_agent - INFO - Validating task completion for WorkflowBackendAgent
+2025-09-24 14:40:08,662 - agents.base_agent - INFO - Task validation complete for WorkflowBackendAgent: passed (3 checks, 0 failed, 0 warnings)
+2025-09-24 14:40:08,662 - __main__ - INFO -   ▶️  Step 6: Workflow completion summary...
+2025-09-24 14:40:08,662 - __main__ - INFO -   ✅ SUCCESS: End-to-end workflow simulation completed successfully
+2025-09-24 14:40:08,662 - __main__ - INFO -      • original_task: Create a basic Flask hello world endpoint
+2025-09-24 14:40:08,662 - __main__ - INFO -      • parsed_successfully: True
+2025-09-24 14:40:08,662 - __main__ - INFO -      • subtasks_created: 4
+2025-09-24 14:40:08,662 - __main__ - INFO -      • backend_assignments: 2
+2025-09-24 14:40:08,662 - __main__ - INFO -      • agent_preparation: completed
+2025-09-24 14:40:08,662 - __main__ - INFO -      • code_generation: simulated
+2025-09-24 14:40:08,662 - __main__ - INFO -      • validation_status: passed
+2025-09-24 14:40:08,662 - __main__ - INFO -      • files_created: 3
+2025-09-24 14:40:08,662 - __main__ - INFO -      • workflow_duration: < 1 second (simulated)
+2025-09-24 14:40:08,662 - __main__ - INFO - 
+============================================================
+2025-09-24 14:40:08,662 - __main__ - INFO - 🧪 STARTING TEST: Test Environment Cleanup
+2025-09-24 14:40:08,662 - __main__ - INFO - ============================================================
+2025-09-24 14:40:08,662 - __main__ - INFO -   ▶️  Cleaning up test resources...
+2025-09-24 14:40:08,662 - __main__ - INFO -   ✅ SUCCESS: Test environment cleanup completed
+2025-09-24 14:40:08,662 - __main__ - INFO -      • temporary_files_removed: 0
+2025-09-24 14:40:08,662 - __main__ - INFO -      • agents_reset: 0
+2025-09-24 14:40:08,662 - __main__ - INFO -      • connections_closed: 0
+2025-09-24 14:46:08,211 - __main__ - INFO - 🚀 Starting AI Agent Automation Hub Local Testing Suite
+2025-09-24 14:46:08,212 - __main__ - INFO - ================================================================================
+2025-09-24 14:46:08,212 - __main__ - INFO - 
+============================================================
+2025-09-24 14:46:08,212 - __main__ - INFO - 🧪 STARTING TEST: Environment Setup & Validation
+2025-09-24 14:46:08,212 - __main__ - INFO - ============================================================
+2025-09-24 14:46:08,212 - __main__ - INFO -   ▶️  Checking project structure...
+2025-09-24 14:46:08,212 - __main__ - INFO -   ▶️  Validating dev_bible structure...
+2025-09-24 14:46:08,212 - __main__ - INFO -   ▶️  Initializing test agents...
+2025-09-24 14:46:08,212 - agents.base_agent - INFO - Initialized TestSetupAgent (general) with dev_bible at /home/admin/Projects/dev-team/ai-agent-automation-hub/dev_bible
+2025-09-24 14:46:08,212 - agents.base_agent - INFO - BaseAgent TestSetupAgent initialized successfully
+2025-09-24 14:46:08,212 - __main__ - INFO -   ✅ SUCCESS: Environment setup completed successfully
+2025-09-24 14:46:08,212 - __main__ - INFO -      • available_dev_bible_files: 3
+2025-09-24 14:46:08,212 - __main__ - INFO -      • missing_dev_bible_files: 0
+2025-09-24 14:46:08,212 - __main__ - INFO -      • project_structure: valid
+2025-09-24 14:46:08,212 - __main__ - INFO - 
+============================================================
+2025-09-24 14:46:08,213 - __main__ - INFO - 🧪 STARTING TEST: DevBibleReader - Initialization and File Reading
+2025-09-24 14:46:08,213 - __main__ - INFO - ============================================================
+2025-09-24 14:46:08,213 - __main__ - INFO -   ▶️  Creating DevBibleReader instance...
+2025-09-24 14:46:08,213 - __main__ - INFO -   ▶️  Testing required reading retrieval...
+2025-09-24 14:46:08,213 - __main__ - INFO -   ▶️  Testing guidelines reading...
+2025-09-24 14:46:08,213 - utils.dev_bible_reader - INFO - Successfully read guidelines from core/coding_standards.md
+2025-09-24 14:46:08,213 - __main__ - INFO -   ▶️  Testing combined guidelines loading...
+2025-09-24 14:46:08,213 - utils.dev_bible_reader - INFO - Successfully read guidelines from core/coding_standards.md
+2025-09-24 14:46:08,213 - utils.dev_bible_reader - INFO - Successfully read guidelines from core/workflow_process.md
+2025-09-24 14:46:08,213 - utils.dev_bible_reader - INFO - Successfully read guidelines from automation_hub/architecture.md
+2025-09-24 14:46:08,213 - __main__ - INFO -   ✅ SUCCESS: DevBibleReader integration working correctly
+2025-09-24 14:46:08,213 - __main__ - INFO -      • backend_files_required: 3
+2025-09-24 14:46:08,213 - __main__ - INFO -      • combined_content_length: 5192
+2025-09-24 14:46:08,213 - __main__ - INFO -      • sample_files: ['core/coding_standards.md', 'core/workflow_process.md', 'automation_hub/architecture.md']
+2025-09-24 14:46:08,213 - __main__ - INFO - 
+============================================================
+2025-09-24 14:46:08,213 - __main__ - INFO - 🧪 STARTING TEST: @require_dev_bible_prep Decorator Functionality
+2025-09-24 14:46:08,213 - __main__ - INFO - ============================================================
+2025-09-24 14:46:08,213 - __main__ - INFO -   ▶️  Creating test agent with decorator methods...
+2025-09-24 14:46:08,213 - agents.base_agent - INFO - Initialized DecoratorTestAgent (backend) with dev_bible at /home/admin/Projects/dev-team/ai-agent-automation-hub/dev_bible
+2025-09-24 14:46:08,213 - agents.base_agent - INFO - BaseAgent DecoratorTestAgent initialized successfully
+2025-09-24 14:46:08,213 - __main__ - INFO -   ▶️  Testing method access without preparation...
+2025-09-24 14:46:08,213 - __main__ - INFO -   ▶️  ✓ Decorator correctly blocked access without preparation
+2025-09-24 14:46:08,214 - __main__ - INFO -   ▶️  Testing method access with preparation...
+2025-09-24 14:46:08,214 - agents.base_agent - INFO - Preparing DecoratorTestAgent for backend task: Test decorator functionality...
+2025-09-24 14:46:08,214 - utils.dev_bible_reader - INFO - Successfully read guidelines from core/coding_standards.md
+2025-09-24 14:46:08,214 - utils.dev_bible_reader - INFO - Successfully read guidelines from core/workflow_process.md
+2025-09-24 14:46:08,214 - utils.dev_bible_reader - INFO - Successfully read guidelines from automation_hub/architecture.md
+2025-09-24 14:46:08,214 - agents.base_agent - INFO - ✓ DecoratorTestAgent preparation complete for backend task. Loaded 5827 characters of guidelines.
+2025-09-24 14:46:08,214 - agents.base_agent - INFO - Executing protected_method for DecoratorTestAgent with proper preparation
+2025-09-24 14:46:08,214 - __main__ - INFO -   ✅ SUCCESS: Decorator functionality working correctly
+2025-09-24 14:46:08,214 - __main__ - INFO -      • preparation_blocking: working
+2025-09-24 14:46:08,214 - __main__ - INFO -      • post_preparation_access: working
+2025-09-24 14:46:08,214 - __main__ - INFO -      • unprotected_methods: working
+2025-09-24 14:46:08,214 - __main__ - INFO - 
+============================================================
+2025-09-24 14:46:08,214 - __main__ - INFO - 🧪 STARTING TEST: Backend Agent - Guidelines Access Validation
+2025-09-24 14:46:08,214 - __main__ - INFO - ============================================================
+2025-09-24 14:46:08,214 - __main__ - INFO -   ▶️  Creating CodeAgent (Backend specialization)...
+2025-09-24 14:46:08,214 - agents.base_agent - INFO - Initialized TestBackendAgent (backend) with dev_bible at /home/admin/Projects/dev-team/ai-agent-automation-hub/dev_bible
+2025-09-24 14:46:08,214 - agents.base_agent - INFO - BaseAgent TestBackendAgent initialized successfully
+2025-09-24 14:46:08,214 - agents.base_agent - INFO - CodeAgent TestBackendAgent initialized
+2025-09-24 14:46:08,214 - __main__ - INFO -   ▶️  Preparing agent for backend task...
+2025-09-24 14:46:08,214 - agents.base_agent - INFO - Preparing TestBackendAgent for backend task: Create a basic Flask hello world endpoint...
+2025-09-24 14:46:08,214 - utils.dev_bible_reader - INFO - Successfully read guidelines from core/coding_standards.md
+2025-09-24 14:46:08,214 - utils.dev_bible_reader - INFO - Successfully read guidelines from core/workflow_process.md
+2025-09-24 14:46:08,214 - utils.dev_bible_reader - INFO - Successfully read guidelines from automation_hub/architecture.md
+2025-09-24 14:46:08,214 - agents.base_agent - INFO - ✓ TestBackendAgent preparation complete for backend task. Loaded 5823 characters of guidelines.
+2025-09-24 14:46:08,214 - __main__ - INFO -   ▶️  Validating guidelines are loaded...
+2025-09-24 14:46:08,215 - __main__ - INFO -   ▶️  Testing coding standards validation...
+2025-09-24 14:46:08,215 - agents.base_agent - INFO - Executing validate_code_standards for TestBackendAgent with proper preparation
+2025-09-24 14:46:08,215 - agents.base_agent - INFO - Validating code standards for TestBackendAgent
+2025-09-24 14:46:08,215 - __main__ - INFO -   ✅ SUCCESS: Backend agent guidelines access working correctly
+2025-09-24 14:46:08,215 - __main__ - INFO -      • guidelines_loaded: True
+2025-09-24 14:46:08,215 - __main__ - INFO -      • guidelines_length: 6579
+2025-09-24 14:46:08,215 - __main__ - INFO -      • task_type: backend
+2025-09-24 14:46:08,215 - __main__ - INFO -      • validation_working: True
+2025-09-24 14:46:08,215 - __main__ - INFO - 
+============================================================
+2025-09-24 14:46:08,215 - __main__ - INFO - 🧪 STARTING TEST: Agent Task Preparation - Process Validation
+2025-09-24 14:46:08,215 - __main__ - INFO - ============================================================
+2025-09-24 14:46:08,215 - __main__ - INFO -   ▶️  Creating backend agent for task preparation test...
+2025-09-24 14:46:08,215 - agents.base_agent - INFO - Initialized TaskPrepAgent (backend) with dev_bible at /home/admin/Projects/dev-team/ai-agent-automation-hub/dev_bible
+2025-09-24 14:46:08,215 - agents.base_agent - INFO - BaseAgent TaskPrepAgent initialized successfully
+2025-09-24 14:46:08,215 - agents.base_agent - INFO - CodeAgent TaskPrepAgent initialized
+2025-09-24 14:46:08,215 - __main__ - INFO -   ▶️  Testing preparation process...
+2025-09-24 14:46:08,215 - agents.base_agent - INFO - Preparing TaskPrepAgent for backend task: Create a basic Flask hello world endpoint...
+2025-09-24 14:46:08,215 - utils.dev_bible_reader - INFO - Successfully read guidelines from core/coding_standards.md
+2025-09-24 14:46:08,215 - utils.dev_bible_reader - INFO - Successfully read guidelines from core/workflow_process.md
+2025-09-24 14:46:08,215 - utils.dev_bible_reader - INFO - Successfully read guidelines from automation_hub/architecture.md
+2025-09-24 14:46:08,215 - agents.base_agent - INFO - ✓ TaskPrepAgent preparation complete for backend task. Loaded 5817 characters of guidelines.
+2025-09-24 14:46:08,215 - __main__ - INFO -   ▶️  Validating agent status after preparation...
+2025-09-24 14:46:08,215 - __main__ - INFO -   ✅ SUCCESS: Task preparation process working correctly
+2025-09-24 14:46:08,215 - __main__ - INFO -      • preparation_complete: True
+2025-09-24 14:46:08,215 - __main__ - INFO -      • guidelines_loaded: True
+2025-09-24 14:46:08,215 - __main__ - INFO -      • task_type: backend
+2025-09-24 14:46:08,215 - __main__ - INFO -      • task_history_count: 1
+2025-09-24 14:46:08,215 - __main__ - INFO - 
+============================================================
+2025-09-24 14:46:08,215 - __main__ - INFO - 🧪 STARTING TEST: Guidelines Loading - Context Integration
+2025-09-24 14:46:08,215 - __main__ - INFO - ============================================================
+2025-09-24 14:46:08,215 - __main__ - INFO -   ▶️  Creating fresh agent for context testing...
+2025-09-24 14:46:08,215 - agents.base_agent - INFO - Initialized ContextTestAgent (testing) with dev_bible at /home/admin/Projects/dev-team/ai-agent-automation-hub/dev_bible
+2025-09-24 14:46:08,216 - agents.base_agent - INFO - BaseAgent ContextTestAgent initialized successfully
+2025-09-24 14:46:08,216 - __main__ - INFO -   ▶️  Preparing agent with testing guidelines...
+2025-09-24 14:46:08,216 - agents.base_agent - INFO - Preparing ContextTestAgent for testing task: Validate application functionality...
+2025-09-24 14:46:08,216 - utils.dev_bible_reader - INFO - Successfully read guidelines from core/coding_standards.md
+2025-09-24 14:46:08,216 - utils.dev_bible_reader - INFO - Successfully read guidelines from core/workflow_process.md
+2025-09-24 14:46:08,216 - agents.base_agent - INFO - ✓ ContextTestAgent preparation complete for testing task. Loaded 3757 characters of guidelines.
+2025-09-24 14:46:08,216 - __main__ - INFO -   ▶️  Extracting and validating guidelines context...
+2025-09-24 14:46:08,216 - __main__ - INFO -   ▶️  Testing context formatting...
+2025-09-24 14:46:08,216 - __main__ - INFO -   ✅ SUCCESS: Guidelines context loading working correctly
+2025-09-24 14:46:08,216 - __main__ - INFO -      • context_length: 4506
+2025-09-24 14:46:08,216 - __main__ - INFO -      • has_proper_headers: True
+2025-09-24 14:46:08,216 - __main__ - INFO -      • agent_name_included: True
+2025-09-24 14:46:08,216 - __main__ - INFO -      • task_type_included: True
+2025-09-24 14:46:08,216 - __main__ - INFO - 
+============================================================
+2025-09-24 14:46:08,216 - __main__ - INFO - 🧪 STARTING TEST: Task Completion Validation
+2025-09-24 14:46:08,216 - __main__ - INFO - ============================================================
+2025-09-24 14:46:08,216 - __main__ - INFO -   ▶️  Setting up agent for completion validation...
+2025-09-24 14:46:08,216 - agents.base_agent - INFO - Initialized ValidationTestAgent (general) with dev_bible at /home/admin/Projects/dev-team/ai-agent-automation-hub/dev_bible
+2025-09-24 14:46:08,216 - agents.base_agent - INFO - BaseAgent ValidationTestAgent initialized successfully
+2025-09-24 14:46:08,216 - agents.base_agent - INFO - Preparing ValidationTestAgent for pre_task task: Test task completion validation...
+2025-09-24 14:46:08,216 - utils.dev_bible_reader - INFO - Successfully read guidelines from core/_agent_quick_start.md
+2025-09-24 14:46:08,216 - utils.dev_bible_reader - INFO - Successfully read guidelines from automation_hub/current_priorities.md
+2025-09-24 14:46:08,216 - agents.base_agent - INFO - ✓ ValidationTestAgent preparation complete for pre_task task. Loaded 4079 characters of guidelines.
+2025-09-24 14:46:08,216 - __main__ - INFO -   ▶️  Testing successful task validation...
+2025-09-24 14:46:08,216 - agents.base_agent - INFO - Executing validate_task_completion for ValidationTestAgent with proper preparation
+2025-09-24 14:46:08,216 - agents.base_agent - INFO - Validating task completion for ValidationTestAgent
+2025-09-24 14:46:08,216 - agents.base_agent - INFO - Task validation complete for ValidationTestAgent: passed (3 checks, 0 failed, 0 warnings)
+2025-09-24 14:46:08,219 - __main__ - INFO -   ▶️  Testing validation with missing required fields...
+2025-09-24 14:46:08,219 - agents.base_agent - INFO - Executing validate_task_completion for ValidationTestAgent with proper preparation
+2025-09-24 14:46:08,219 - agents.base_agent - INFO - Validating task completion for ValidationTestAgent
+2025-09-24 14:46:08,219 - agents.base_agent - INFO - Task validation complete for ValidationTestAgent: failed (3 checks, 1 failed, 0 warnings)
+2025-09-24 14:46:08,219 - __main__ - INFO -   ✅ SUCCESS: Task completion validation working correctly
+2025-09-24 14:46:08,219 - __main__ - INFO -      • successful_validation: passed
+2025-09-24 14:46:08,219 - __main__ - INFO -      • compliance_checks_count: 3
+2025-09-24 14:46:08,219 - __main__ - INFO -      • incomplete_validation: failed
+2025-09-24 14:46:08,219 - __main__ - INFO -      • recommendations_provided: 0
+2025-09-24 14:46:08,219 - __main__ - INFO - 
+============================================================
+2025-09-24 14:46:08,219 - __main__ - INFO - 🧪 STARTING TEST: Discord Command Parsing
+2025-09-24 14:46:08,219 - __main__ - INFO - ============================================================
+2025-09-24 14:46:08,219 - __main__ - INFO -   ▶️  Creating OrchestratorAgent...
+2025-09-24 14:46:08,219 - agents.base_agent - INFO - Initialized TestOrchestrator (pre_task) with dev_bible at /home/admin/Projects/dev-team/ai-agent-automation-hub/dev_bible
+2025-09-24 14:46:08,219 - agents.base_agent - INFO - BaseAgent TestOrchestrator initialized successfully
+2025-09-24 14:46:08,219 - agents.orchestrator_agent - INFO - OrchestratorAgent TestOrchestrator initialized with task management capabilities
+2025-09-24 14:46:08,219 - agents.base_agent - INFO - Preparing TestOrchestrator for pre_task task: Parse and coordinate development tasks...
+2025-09-24 14:46:08,219 - utils.dev_bible_reader - INFO - Successfully read guidelines from core/_agent_quick_start.md
+2025-09-24 14:46:08,220 - utils.dev_bible_reader - INFO - Successfully read guidelines from automation_hub/current_priorities.md
+2025-09-24 14:46:08,220 - agents.base_agent - INFO - ✓ TestOrchestrator preparation complete for pre_task task. Loaded 4073 characters of guidelines.
+2025-09-24 14:46:08,220 - __main__ - INFO -   ▶️  Testing Discord command parsing...
+2025-09-24 14:46:08,220 - agents.base_agent - INFO - Executing parse_discord_command for TestOrchestrator with proper preparation
+2025-09-24 14:46:08,220 - agents.orchestrator_agent - INFO - Parsing Discord command for TestOrchestrator: /assign-task Create user login endpoint backend...
+2025-09-24 14:46:08,221 - agents.orchestrator_agent - INFO - ✓ Parsed command: assign | Complexity: moderate | Urgency: normal
+2025-09-24 14:46:08,221 - __main__ - INFO -   ▶️  Testing complexity assessment...
+2025-09-24 14:46:08,221 - __main__ - INFO -   ✅ SUCCESS: Discord command parsing working correctly
+2025-09-24 14:46:08,221 - __main__ - INFO -      • command_type: assign
+2025-09-24 14:46:08,221 - __main__ - INFO -      • task_description_extracted: True
+2025-09-24 14:46:08,221 - __main__ - INFO -      • complexity_assessed: moderate
+2025-09-24 14:46:08,221 - __main__ - INFO -      • urgency_assessed: normal
+2025-09-24 14:46:08,221 - __main__ - INFO - 
+============================================================
+2025-09-24 14:46:08,221 - __main__ - INFO - 🧪 STARTING TEST: Task Identification and Agent Assignment
+2025-09-24 14:46:08,221 - __main__ - INFO - ============================================================
+2025-09-24 14:46:08,221 - __main__ - INFO -   ▶️  Testing backend task identification...
+2025-09-24 14:46:08,221 - agents.base_agent - INFO - Executing break_down_task for TestOrchestrator with proper preparation
+2025-09-24 14:46:08,221 - agents.orchestrator_agent - INFO - Breaking down task for TestOrchestrator: Create user login endpoint backend
+2025-09-24 14:46:08,221 - agents.orchestrator_agent - INFO - ✓ Task broken down into 4 subtasks
+2025-09-24 14:46:08,221 - __main__ - INFO -   ▶️  Testing task assignment...
+2025-09-24 14:46:08,221 - agents.base_agent - INFO - Executing assign_to_agent for TestOrchestrator with proper preparation
+2025-09-24 14:46:08,221 - agents.orchestrator_agent - INFO - Assigning 4 subtasks to agents
+2025-09-24 14:46:08,221 - agents.orchestrator_agent - INFO - ✓ Assignment complete: 3 agent types, 0 conflicts, estimated time: 8 hours
+2025-09-24 14:46:08,221 - __main__ - INFO -   ▶️  Found 2 backend assignments
+2025-09-24 14:46:08,221 - __main__ - INFO -   ✅ SUCCESS: Task identification and assignment working correctly
+2025-09-24 14:46:08,221 - __main__ - INFO -      • subtasks_created: 4
+2025-09-24 14:46:08,221 - __main__ - INFO -      • backend_subtasks: 2
+2025-09-24 14:46:08,221 - __main__ - INFO -      • agent_types_involved: ['backend', 'testing', 'documentation']
+2025-09-24 14:46:08,221 - __main__ - INFO -      • total_estimated_time: 8 hours
+2025-09-24 14:46:08,221 - __main__ - INFO - 
+============================================================
+2025-09-24 14:46:08,221 - __main__ - INFO - 🧪 STARTING TEST: Task Complexity Assessment
+2025-09-24 14:46:08,222 - __main__ - INFO - ============================================================
+2025-09-24 14:46:08,222 - __main__ - INFO -   ▶️  Testing various complexity levels...
+2025-09-24 14:46:08,222 - agents.base_agent - INFO - Executing validate_task_complexity for TestOrchestrator with proper preparation
+2025-09-24 14:46:08,222 - agents.orchestrator_agent - INFO - Validating task complexity: Create simple hello world...
+2025-09-24 14:46:08,222 - __main__ - INFO -   ▶️  'Create simple hello world' -> simple
+2025-09-24 14:46:08,222 - agents.base_agent - INFO - Executing validate_task_complexity for TestOrchestrator with proper preparation
+2025-09-24 14:46:08,222 - agents.orchestrator_agent - INFO - Validating task complexity: Build user authentication API with database...
+2025-09-24 14:46:08,222 - __main__ - INFO -   ▶️  'Build user authentication API with database' -> moderate
+2025-09-24 14:46:08,222 - agents.base_agent - INFO - Executing validate_task_complexity for TestOrchestrator with proper preparation
+2025-09-24 14:46:08,222 - agents.orchestrator_agent - INFO - Validating task complexity: Design microservices architecture...
+2025-09-24 14:46:08,222 - __main__ - INFO -   ▶️  'Design microservices architecture' -> complex
+2025-09-24 14:46:08,222 - agents.base_agent - INFO - Executing validate_task_complexity for TestOrchestrator with proper preparation
+2025-09-24 14:46:08,222 - agents.orchestrator_agent - INFO - Validating task complexity: Do something...
+2025-09-24 14:46:08,222 - __main__ - INFO -   ▶️  'Do something' -> unclear
+2025-09-24 14:46:08,222 - __main__ - INFO -   ▶️  Testing clarification question generation...
+2025-09-24 14:46:08,222 - __main__ - INFO -   ✅ SUCCESS: Task complexity assessment working correctly
+2025-09-24 14:46:08,222 - __main__ - INFO -      • complexity_assessments: {'Create simple hello world': 'simple', 'Build user authentication API with database': 'moderate', 'Design microservices architecture': 'complex', 'Do something': 'unclear'}
+2025-09-24 14:46:08,222 - __main__ - INFO -      • clarification_questions_count: 1
+2025-09-24 14:46:08,222 - __main__ - INFO -      • sample_question: Could you provide more specific details about: Do something?
+2025-09-24 14:46:08,222 - __main__ - INFO - 
+============================================================
+2025-09-24 14:46:08,223 - __main__ - INFO - 🧪 STARTING TEST: End-to-End Workflow Simulation
+2025-09-24 14:46:08,223 - __main__ - INFO - ============================================================
+2025-09-24 14:46:08,223 - __main__ - INFO -   ▶️  Setting up workflow components...
+2025-09-24 14:46:08,223 - agents.base_agent - INFO - Initialized WorkflowOrchestrator (pre_task) with dev_bible at /home/admin/Projects/dev-team/ai-agent-automation-hub/dev_bible
+2025-09-24 14:46:08,223 - agents.base_agent - INFO - BaseAgent WorkflowOrchestrator initialized successfully
+2025-09-24 14:46:08,223 - agents.orchestrator_agent - INFO - OrchestratorAgent WorkflowOrchestrator initialized with task management capabilities
+2025-09-24 14:46:08,223 - agents.base_agent - INFO - Initialized WorkflowBackendAgent (backend) with dev_bible at /home/admin/Projects/dev-team/ai-agent-automation-hub/dev_bible
+2025-09-24 14:46:08,223 - agents.base_agent - INFO - BaseAgent WorkflowBackendAgent initialized successfully
+2025-09-24 14:46:08,223 - agents.base_agent - INFO - CodeAgent WorkflowBackendAgent initialized
+2025-09-24 14:46:08,223 - agents.base_agent - INFO - Preparing WorkflowOrchestrator for pre_task task: Coordinate development workflow...
+2025-09-24 14:46:08,223 - utils.dev_bible_reader - INFO - Successfully read guidelines from core/_agent_quick_start.md
+2025-09-24 14:46:08,224 - utils.dev_bible_reader - INFO - Successfully read guidelines from automation_hub/current_priorities.md
+2025-09-24 14:46:08,224 - agents.base_agent - INFO - ✓ WorkflowOrchestrator preparation complete for pre_task task. Loaded 4081 characters of guidelines.
+2025-09-24 14:46:08,224 - agents.base_agent - INFO - Preparing WorkflowBackendAgent for backend task: Execute backend development tasks...
+2025-09-24 14:46:08,224 - utils.dev_bible_reader - INFO - Successfully read guidelines from core/coding_standards.md
+2025-09-24 14:46:08,224 - utils.dev_bible_reader - INFO - Successfully read guidelines from core/workflow_process.md
+2025-09-24 14:46:08,224 - utils.dev_bible_reader - INFO - Successfully read guidelines from automation_hub/architecture.md
+2025-09-24 14:46:08,224 - agents.base_agent - INFO - ✓ WorkflowBackendAgent preparation complete for backend task. Loaded 5831 characters of guidelines.
+2025-09-24 14:46:08,224 - __main__ - INFO -   ▶️  Step 1: OrchestratorAgent receives task...
+2025-09-24 14:46:08,224 - agents.base_agent - INFO - Executing parse_discord_command for WorkflowOrchestrator with proper preparation
+2025-09-24 14:46:08,224 - agents.orchestrator_agent - INFO - Parsing Discord command for WorkflowOrchestrator: !create Create a basic Flask hello world endpoint...
+2025-09-24 14:46:08,224 - agents.orchestrator_agent - INFO - ✓ Parsed command: create | Complexity: simple | Urgency: normal
+2025-09-24 14:46:08,224 - __main__ - INFO -   ▶️  Step 2: Task breakdown and assignment...
+2025-09-24 14:46:08,224 - agents.base_agent - INFO - Executing break_down_task for WorkflowOrchestrator with proper preparation
+2025-09-24 14:46:08,224 - agents.orchestrator_agent - INFO - Breaking down task for WorkflowOrchestrator: Create a basic Flask hello world endpoint
+2025-09-24 14:46:08,224 - agents.orchestrator_agent - INFO - ✓ Task broken down into 4 subtasks
+2025-09-24 14:46:08,224 - agents.base_agent - INFO - Executing assign_to_agent for WorkflowOrchestrator with proper preparation
+2025-09-24 14:46:08,224 - agents.orchestrator_agent - INFO - Assigning 4 subtasks to agents
+2025-09-24 14:46:08,225 - agents.orchestrator_agent - INFO - ✓ Assignment complete: 3 agent types, 0 conflicts, estimated time: 8 hours
+2025-09-24 14:46:08,225 - __main__ - INFO -   ▶️  Step 3: BackendAgent prepares with dev bible...
+2025-09-24 14:46:08,225 - __main__ - INFO -   ▶️  Step 4: BackendAgent simulates code creation...
+2025-09-24 14:46:08,225 - __main__ - INFO -   ▶️  Step 5: Task validation and completion...
+2025-09-24 14:46:08,225 - agents.base_agent - INFO - Executing validate_task_completion for WorkflowBackendAgent with proper preparation
+2025-09-24 14:46:08,225 - agents.base_agent - INFO - Validating task completion for WorkflowBackendAgent
+2025-09-24 14:46:08,225 - agents.base_agent - INFO - Task validation complete for WorkflowBackendAgent: passed (3 checks, 0 failed, 0 warnings)
+2025-09-24 14:46:08,225 - __main__ - INFO -   ▶️  Step 6: Workflow completion summary...
+2025-09-24 14:46:08,225 - __main__ - INFO -   ✅ SUCCESS: End-to-end workflow simulation completed successfully
+2025-09-24 14:46:08,225 - __main__ - INFO -      • original_task: Create a basic Flask hello world endpoint
+2025-09-24 14:46:08,225 - __main__ - INFO -      • parsed_successfully: True
+2025-09-24 14:46:08,225 - __main__ - INFO -      • subtasks_created: 4
+2025-09-24 14:46:08,225 - __main__ - INFO -      • backend_assignments: 2
+2025-09-24 14:46:08,225 - __main__ - INFO -      • agent_preparation: completed
+2025-09-24 14:46:08,225 - __main__ - INFO -      • code_generation: simulated
+2025-09-24 14:46:08,225 - __main__ - INFO -      • validation_status: passed
+2025-09-24 14:46:08,225 - __main__ - INFO -      • files_created: 3
+2025-09-24 14:46:08,225 - __main__ - INFO -      • workflow_duration: < 1 second (simulated)
+2025-09-24 14:46:08,225 - __main__ - INFO - 
+============================================================
+2025-09-24 14:46:08,225 - __main__ - INFO - 🧪 STARTING TEST: Test Environment Cleanup
+2025-09-24 14:46:08,225 - __main__ - INFO - ============================================================
+2025-09-24 14:46:08,225 - __main__ - INFO -   ▶️  Cleaning up test resources...
+2025-09-24 14:46:08,225 - __main__ - INFO -   ✅ SUCCESS: Test environment cleanup completed
+2025-09-24 14:46:08,225 - __main__ - INFO -      • temporary_files_removed: 0
+2025-09-24 14:46:08,225 - __main__ - INFO -      • agents_reset: 0
+2025-09-24 14:46:08,225 - __main__ - INFO -      • connections_closed: 0
