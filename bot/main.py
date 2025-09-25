@@ -24,6 +24,8 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from agents.orchestrator_agent import OrchestratorAgent
 from agents.backend_agent import BackendAgent
 from agents.database_agent import DatabaseAgent
+from bot.safety_commands import setup_safety_commands
+from safety_monitor import get_safety_monitor
 
 # Load environment variables
 load_dotenv()
@@ -73,8 +75,17 @@ class FullDiscordBot(discord.Client):
             'database': 'initializing'
         }
         
+        # Initialize safety monitor
+        self.safety_monitor = get_safety_monitor({
+            'discord_webhook_url': None,  # Could be configured
+            'monitoring_interval': 30
+        })
+        
         # Setup slash commands from orchestrator commands
         self._setup_commands()
+        
+        # Setup safety commands
+        setup_safety_commands(self)
         
         logger.info("Full Discord bot initialized successfully")
     
@@ -93,7 +104,8 @@ class FullDiscordBot(discord.Client):
         @self.tree.command(name="ping", description="Check if the bot is responsive")
         async def ping_command(interaction: discord.Interaction):
             """Simple ping command to test bot responsiveness"""
-            await interaction.response.send_message("🏓 Pong! Automation Hub is online and ready.", ephemeral=True)
+            await interaction.response.defer(ephemeral=True)
+            await interaction.followup.send("🏓 Pong! Automation Hub is online and ready.", ephemeral=True)
             logger.info(f"Ping command used by {interaction.user}")
         
         @self.tree.command(name="assign-task", description="Assign a new development task to the AI agents")
@@ -109,53 +121,34 @@ class FullDiscordBot(discord.Client):
         ])
         async def assign_task_command(interaction: discord.Interaction, description: str, priority: Optional[str] = "medium"):
             """Assign a development task to AI agents"""
+            # CRITICAL: Defer immediately to prevent timeout
             await interaction.response.defer()
             
             try:
+                # Simplified approach - direct execution without nested async function
+                result = None
+                
                 if self.orchestrator and hasattr(self.orchestrator, 'assign_task'):
-                    # Use full orchestrator if available
-                    if TaskPriority:
-                        task_priority = TaskPriority(priority.lower())
-                    else:
-                        task_priority = priority.lower()
-                    
-                    result = await self.orchestrator.assign_task(
-                        description=description,
-                        user_id=str(interaction.user.id),
-                        channel_id=str(interaction.channel.id),
-                        priority=task_priority
-                    )
-                    
-                    if result["success"]:
-                        if result.get("requires_clarification"):
-                            # Create clarification embed
-                            embed = discord.Embed(
-                                title="🤔 Task Needs Clarification",
-                                description=f"**Task:** {description[:200]}...\n\n**Task ID:** `{result['task_id']}`",
-                                color=discord.Color.orange()
-                            )
-                            
-                            # Add clarifying questions
-                            questions_text = "\n".join([f"{i+1}. {q}" for i, q in enumerate(result["questions"])])
-                            embed.add_field(name="Questions:", value=questions_text, inline=False)
-                            embed.add_field(name="Next Steps:", value="Please answer these questions using `/clarify-task`", inline=False)
+                    try:
+                        # Use full orchestrator if available with timeout
+                        if TaskPriority:
+                            task_priority = TaskPriority(priority.lower())
                         else:
-                            # Task assigned successfully
-                            embed = discord.Embed(
-                                title="✅ Task Assigned Successfully",
-                                description=f"**Task:** {description[:200]}...\n\n**Task ID:** `{result['task_id']}`",
-                                color=discord.Color.green()
-                            )
-                            embed.add_field(name="Estimated Time:", value=f"{result.get('estimated_hours', 'TBD')} hours", inline=True)
-                            embed.add_field(name="Category:", value=result.get("category", "general").title(), inline=True)
-                            embed.add_field(name="Priority:", value=priority.title(), inline=True)
-                    else:
-                        # Task assignment failed
-                        embed = discord.Embed(
-                            title="❌ Task Assignment Failed",
-                            description=result["message"],
-                            color=discord.Color.red()
+                            task_priority = priority.lower()
+                        
+                        result = await asyncio.wait_for(
+                            self.orchestrator.assign_task(
+                                description=description,
+                                user_id=str(interaction.user.id),
+                                channel_id=str(interaction.channel.id),
+                                priority=task_priority
+                            ),
+                            timeout=25
                         )
+                    except asyncio.TimeoutError:
+                        await interaction.followup.send("⏱️ Task assignment is taking longer than expected. The task has been queued and you'll be notified when it's processed.")
+                        logger.warning(f"Task assignment timeout for user {interaction.user}: {description[:100]}")
+                        return
                 else:
                     # Fallback to simple task assignment
                     task_id = f"task_{len(self.active_tasks) + 1}_{datetime.now().strftime('%H%M%S')}"
@@ -168,13 +161,52 @@ class FullDiscordBot(discord.Client):
                         'assigned_by': interaction.user.id
                     }
                     
+                    result = {
+                        "success": True,
+                        "task_id": task_id,
+                        "requires_clarification": False,
+                        "estimated_hours": 2.0,
+                        "category": "general",
+                        "message": f"Task assigned successfully! (Simplified mode)"
+                    }
+                    
+                if result and result["success"]:
+                    if result.get("requires_clarification"):
+                        # Create clarification embed
+                        embed = discord.Embed(
+                            title="🤔 Task Needs Clarification",
+                            description=f"**Task:** {description[:200]}...\n\n**Task ID:** `{result['task_id']}`",
+                            color=discord.Color.orange()
+                        )
+                        
+                        # Add clarifying questions
+                        questions_text = "\n".join([f"{i+1}. {q}" for i, q in enumerate(result.get("questions", []))])
+                        embed.add_field(name="Questions:", value=questions_text, inline=False)
+                        embed.add_field(name="Next Steps:", value="Please answer these questions using `/clarify-task`", inline=False)
+                    else:
+                        # Task assigned successfully
+                        embed = discord.Embed(
+                            title="✅ Task Assigned Successfully",
+                            description=f"**Task:** {description[:200]}...\n\n**Task ID:** `{result['task_id']}`",
+                            color=discord.Color.green()
+                        )
+                        embed.add_field(name="Estimated Time:", value=f"{result.get('estimated_hours', 'TBD')} hours", inline=True)
+                        embed.add_field(name="Category:", value=result.get("category", "general").title(), inline=True)
+                        embed.add_field(name="Priority:", value=priority.title(), inline=True)
+                elif result:
+                    # Task assignment failed
                     embed = discord.Embed(
-                        title="✅ Task Assigned (Simplified)",
-                        description=f"**Task ID:** `{task_id}`\n**Priority:** {priority.title()}",
-                        color=discord.Color.green()
+                        title="❌ Task Assignment Failed",
+                        description=result["message"],
+                        color=discord.Color.red()
                     )
-                    embed.add_field(name="Description", value=description[:500], inline=False)
-                    embed.add_field(name="Note", value="Full orchestrator not available - basic assignment used", inline=False)
+                else:
+                    # No result
+                    embed = discord.Embed(
+                        title="❌ Task Assignment Failed",
+                        description="An unexpected error occurred during task assignment.",
+                        color=discord.Color.red()
+                    )
                 
                 await interaction.followup.send(embed=embed)
                 logger.info(f"Task assigned by {interaction.user}: {description[:100]}")
@@ -202,34 +234,46 @@ class FullDiscordBot(discord.Client):
             answer5: Optional[str] = None
         ):
             """Provide clarification answers for a task"""
+            # CRITICAL: Defer immediately to prevent timeout
             await interaction.response.defer()
             
             try:
-                if self.orchestrator and hasattr(self.orchestrator, 'provide_clarification'):
-                    # Collect non-empty answers
-                    answers = [answer for answer in [answer1, answer2, answer3, answer4, answer5] if answer]
-                    
-                    # Process clarification
-                    result = await self.orchestrator.provide_clarification(task_id, answers)
-                    
-                    if result["success"]:
-                        embed = discord.Embed(
-                            title="✅ Task Clarified and Assigned",
-                            description=result["message"],
-                            color=discord.Color.green()
-                        )
-                        embed.add_field(name="Task ID:", value=f"`{task_id}`", inline=True)
-                        embed.add_field(name="Estimated Time:", value=f"{result.get('estimated_hours', 'TBD')} hours", inline=True)
+                timeout_seconds = 25
+                
+                async def process_clarification_with_timeout():
+                    if self.orchestrator and hasattr(self.orchestrator, 'provide_clarification'):
+                        # Collect non-empty answers
+                        answers = [answer for answer in [answer1, answer2, answer3, answer4, answer5] if answer]
+                        
+                        # Process clarification
+                        result = await self.orchestrator.provide_clarification(task_id, answers)
+                        return result
                     else:
-                        embed = discord.Embed(
-                            title="❌ Clarification Failed",
-                            description=result["message"],
-                            color=discord.Color.red()
-                        )
+                        return {
+                            "success": False,
+                            "message": "Task clarification requires full orchestrator integration"
+                        }
+                
+                # Execute with timeout
+                try:
+                    result = await asyncio.wait_for(process_clarification_with_timeout(), timeout=timeout_seconds)
+                except asyncio.TimeoutError:
+                    await interaction.followup.send("⏱️ Task clarification is taking longer than expected. Please try again in a moment.")
+                    logger.warning(f"Task clarification timeout for user {interaction.user}: {task_id}")
+                    return
+                
+                if result["success"]:
+                    embed = discord.Embed(
+                        title="✅ Task Clarified and Assigned",
+                        description=result["message"],
+                        color=discord.Color.green()
+                    )
+                    embed.add_field(name="Task ID:", value=f"`{task_id}`", inline=True)
+                    embed.add_field(name="Estimated Time:", value=f"{result.get('estimated_hours', 'TBD')} hours", inline=True)
                 else:
                     embed = discord.Embed(
-                        title="❌ Orchestrator Not Available",
-                        description="Task clarification requires full orchestrator integration",
+                        title="❌ Clarification Failed",
+                        description=result["message"],
                         color=discord.Color.red()
                     )
                 
@@ -244,72 +288,90 @@ class FullDiscordBot(discord.Client):
         @self.tree.command(name="status", description="Get current system and task status")
         async def status_command(interaction: discord.Interaction):
             """Display comprehensive system status"""
+            # CRITICAL: Defer immediately to prevent timeout
             await interaction.response.defer()
             
             try:
-                if self.orchestrator and hasattr(self.orchestrator, 'get_status_report'):
-                    status_report = await self.orchestrator.get_status_report()
-                    
-                    embed = discord.Embed(
-                        title="🤖 Automation Hub Status",
-                        color=discord.Color.blue()
-                    )
-                    
-                    if "error" in status_report:
-                        embed.description = f"⚠️ {status_report['error']}"
-                        embed.color = discord.Color.red()
+                timeout_seconds = 20
+                
+                async def get_status_with_timeout():
+                    if self.orchestrator and hasattr(self.orchestrator, 'get_status_report'):
+                        status_report = await self.orchestrator.get_status_report()
+                        
+                        embed = discord.Embed(
+                            title="🤖 Automation Hub Status",
+                            color=discord.Color.blue()
+                        )
+                        
+                        if "error" in status_report:
+                            embed.description = f"⚠️ {status_report['error']}"
+                            embed.color = discord.Color.red()
+                        else:
+                            # System status
+                            uptime = status_report.get('uptime', 'Unknown')
+                            embed.add_field(
+                                name="🔧 System", 
+                                value=f"Status: {status_report.get('orchestrator_status', 'unknown').title()}\nUptime: {uptime}", 
+                                inline=True
+                            )
+                            
+                            # Task statistics
+                            tasks = status_report.get('tasks', {})
+                            embed.add_field(
+                                name="📋 Active Tasks",
+                                value=f"Total: {tasks.get('total', len(self.active_tasks))}\nPending: {tasks.get('pending', 0)}\nIn Progress: {tasks.get('in_progress', 0)}\nCompleted: {tasks.get('completed', 0)}",
+                                inline=True
+                            )
+                            
+                            # Agent status
+                            embed.add_field(
+                                name="🤖 Agents",
+                                value=f"Orchestrator: {self.agent_status.get('orchestrator', 'unknown')}\nBackend: {self.agent_status.get('backend', 'unknown')}\nDatabase: {self.agent_status.get('database', 'unknown')}",
+                                inline=True
+                            )
+                            
+                            # Add quick action guides
+                            embed.set_footer(text="💡 /assign-task • /approve [pr-number] • /pending-prs • /emergency-stop")
+                        return embed
                     else:
-                        # System status
-                        uptime = status_report.get('uptime', 'Unknown')
-                        embed.add_field(
-                            name="🔧 System", 
-                            value=f"Status: {status_report.get('orchestrator_status', 'unknown').title()}\nUptime: {uptime}", 
-                            inline=True
+                        # Fallback status display
+                        embed = discord.Embed(
+                            title="🤖 Basic Bot Status",
+                            color=discord.Color.blue()
                         )
                         
-                        # Task statistics
-                        tasks = status_report.get('tasks', {})
+                        for agent_name, status in self.agent_status.items():
+                            status_icon = "✅" if status == "ready" else "❌" if status == "error" else "⚠️"
+                            embed.add_field(
+                                name=f"{status_icon} {agent_name.title()} Agent",
+                                value=f"Status: {status}",
+                                inline=True
+                            )
+                        
                         embed.add_field(
-                            name="📋 Active Tasks",
-                            value=f"Total: {tasks.get('total', len(self.active_tasks))}\nPending: {tasks.get('pending', 0)}\nIn Progress: {tasks.get('in_progress', 0)}\nCompleted: {tasks.get('completed', 0)}",
-                            inline=True
+                            name="📊 Active Tasks",
+                            value=f"{len(self.active_tasks)} tasks running",
+                            inline=False
                         )
                         
-                        # Agent status
                         embed.add_field(
-                            name="🤖 Agents",
-                            value=f"Orchestrator: {self.agent_status.get('orchestrator', 'unknown')}\nBackend: {self.agent_status.get('backend', 'unknown')}\nDatabase: {self.agent_status.get('database', 'unknown')}",
-                            inline=True
+                            name="Note", 
+                            value="Full orchestrator not available - showing basic status", 
+                            inline=False
                         )
-                        
-                        # Add quick action guides
-                        embed.set_footer(text="💡 /assign-task • /approve [pr-number] • /pending-prs • /emergency-stop")
-                else:
-                    # Fallback status display
+                        return embed
+                
+                # Execute with timeout
+                try:
+                    embed = await asyncio.wait_for(get_status_with_timeout(), timeout=timeout_seconds)
+                except asyncio.TimeoutError:
                     embed = discord.Embed(
-                        title="🤖 Basic Bot Status",
-                        color=discord.Color.blue()
+                        title="⏱️ Status Check Timeout",
+                        description="Status retrieval is taking longer than expected. The system may be under heavy load.",
+                        color=discord.Color.orange()
                     )
-                    
-                    for agent_name, status in self.agent_status.items():
-                        status_icon = "✅" if status == "ready" else "❌" if status == "error" else "⚠️"
-                        embed.add_field(
-                            name=f"{status_icon} {agent_name.title()} Agent",
-                            value=f"Status: {status}",
-                            inline=True
-                        )
-                    
-                    embed.add_field(
-                        name="📊 Active Tasks",
-                        value=f"{len(self.active_tasks)} tasks running",
-                        inline=False
-                    )
-                    
-                    embed.add_field(
-                        name="Note", 
-                        value="Full orchestrator not available - showing basic status", 
-                        inline=False
-                    )
+                    embed.add_field(name="Suggestion", value="Try again in a moment or contact support if this persists.", inline=False)
+                    logger.warning(f"Status command timeout for user {interaction.user}")
                 
                 await interaction.followup.send(embed=embed)
                 
@@ -323,36 +385,150 @@ class FullDiscordBot(discord.Client):
         @app_commands.describe(pr_number="The pull request number to approve and merge")
         async def approve_pr_command(interaction: discord.Interaction, pr_number: int):
             """Approve and merge a pull request"""
+            # CRITICAL: Defer immediately to prevent timeout
             await interaction.response.defer()
             
             try:
-                if self.orchestrator and hasattr(self.orchestrator, 'approve_and_merge_pr'):
-                    result = await self.orchestrator.approve_and_merge_pr(pr_number, str(interaction.user.id))
-                    
-                    if result["success"]:
-                        embed = discord.Embed(
-                            title="✅ PR Approved and Merged",
-                            description=f"**PR #{pr_number}** has been successfully merged by {interaction.user.mention}",
-                            color=discord.Color.green()
+                # Simplified approach - direct execution without nested async function
+                embed = None
+                
+                # Try to get GitHub client from backend agent first
+                github_client = None
+                if self.backend_agent and hasattr(self.backend_agent, 'github_client'):
+                    github_client = self.backend_agent.github_client
+                elif self.orchestrator and hasattr(self.orchestrator, 'github_client'):
+                    github_client = self.orchestrator.github_client
+                
+                if github_client:
+                    try:
+                        # First, get PR details with timeout
+                        pr_details = await asyncio.wait_for(
+                            github_client.get_pull_request(pr_number),
+                            timeout=20
                         )
-                        embed.add_field(name="PR Title", value=result.get("pr_title", "N/A"), inline=False)
-                        if result.get("sha"):
-                            embed.add_field(name="Merge Commit", value=f"`{result['sha'][:8]}`", inline=True)
-                        embed.set_footer(text=f"Approved by {interaction.user.display_name}")
-                    else:
+                        
+                        if not pr_details:
+                            embed = discord.Embed(
+                                title="❌ PR Not Found",
+                                description=f"Pull request #{pr_number} was not found.",
+                                color=discord.Color.red()
+                            )
+                        
+                        # Check if PR is already merged
+                        elif pr_details.get('merged'):
+                            embed = discord.Embed(
+                                title="ℹ️ PR Already Merged",
+                                description=f"**PR #{pr_number}** - {pr_details.get('title', 'No title')}\n\nThis pull request has already been merged.",
+                                color=discord.Color.blue()
+                            )
+                            embed.add_field(name="Author", value=pr_details.get('author', 'Unknown'), inline=True)
+                            embed.add_field(name="Branch", value=f"`{pr_details.get('head_branch', 'unknown')}`", inline=True)
+                        
+                        # Check if PR is mergeable
+                        elif not pr_details.get('mergeable'):
+                            mergeable_state = pr_details.get('mergeable_state', 'unknown')
+                            embed = discord.Embed(
+                                title="⚠️ PR Cannot Be Merged",
+                                description=f"**PR #{pr_number}** - {pr_details.get('title', 'No title')}\n\nThis PR cannot be merged due to: `{mergeable_state}`",
+                                color=discord.Color.orange()
+                            )
+                            embed.add_field(name="Author", value=pr_details.get('author', 'Unknown'), inline=True)
+                            embed.add_field(name="Branch", value=f"`{pr_details.get('head_branch', 'unknown')}`", inline=True)
+                            embed.add_field(name="Suggestion", value="Please resolve conflicts or check PR status on GitHub", inline=False)
+                        
+                        else:
+                            # Attempt to merge the PR with timeout
+                            merge_result = await asyncio.wait_for(
+                                github_client.merge_pull_request(pr_number, merge_method="merge"),
+                                timeout=20
+                            )
+                            
+                            if merge_result and merge_result.get('success'):
+                                embed = discord.Embed(
+                                    title="✅ PR Approved and Merged",
+                                    description=f"**PR #{pr_number}** - {pr_details.get('title', 'No title')}\n\nSuccessfully merged by {interaction.user.mention}",
+                                    color=discord.Color.green()
+                                )
+                                embed.add_field(name="Author", value=pr_details.get('author', 'Unknown'), inline=True)
+                                embed.add_field(name="Branch", value=f"`{pr_details.get('head_branch', 'unknown')}` → `{pr_details.get('base_branch', 'main')}`", inline=True)
+                                embed.add_field(name="Files Changed", value=f"{pr_details.get('files_changed_count', 0)} files (+{pr_details.get('additions', 0)} -{pr_details.get('deletions', 0)})", inline=True)
+                                
+                                if merge_result.get('sha'):
+                                    embed.add_field(name="Merge Commit", value=f"`{merge_result['sha'][:8]}`", inline=True)
+                                
+                                embed.add_field(name="View PR", value=f"[GitHub Link]({pr_details.get('url', '#')})", inline=True)
+                                embed.set_footer(text=f"Approved by {interaction.user.display_name}")
+                            else:
+                                error_message = merge_result.get('message', 'Unknown error') if merge_result else 'Merge operation failed'
+                                embed = discord.Embed(
+                                    title="❌ PR Merge Failed",
+                                    description=f"**PR #{pr_number}** could not be merged.\n\n**Error:** {error_message}",
+                                    color=discord.Color.red()
+                                )
+                    
+                    except asyncio.TimeoutError:
                         embed = discord.Embed(
-                            title="❌ PR Approval Failed",
-                            description=result["message"],
+                            title="⏱️ PR Approval Timeout",
+                            description=f"PR #{pr_number} approval is taking longer than expected. This may be due to GitHub API delays.",
+                            color=discord.Color.orange()
+                        )
+                        embed.add_field(name="Suggestion", value="Try again in a moment or check the PR status on GitHub directly.", inline=False)
+                        logger.warning(f"PR approval timeout for user {interaction.user}: PR #{pr_number}")
+                    except Exception as github_error:
+                        logger.error(f"GitHub API error during PR approval: {github_error}")
+                        embed = discord.Embed(
+                            title="❌ GitHub API Error",
+                            description=f"Failed to process PR #{pr_number}: {str(github_error)}",
                             color=discord.Color.red()
                         )
+                
+                elif self.orchestrator and hasattr(self.orchestrator, 'approve_and_merge_pr'):
+                    try:
+                        # Fallback to orchestrator method with timeout
+                        result = await asyncio.wait_for(
+                            self.orchestrator.approve_and_merge_pr(pr_number, str(interaction.user.id)),
+                            timeout=20
+                        )
+                        
+                        if result["success"]:
+                            embed = discord.Embed(
+                                title="✅ PR Approved and Merged",
+                                description=f"**PR #{pr_number}** has been successfully merged by {interaction.user.mention}",
+                                color=discord.Color.green()
+                            )
+                            embed.add_field(name="PR Title", value=result.get("pr_title", "N/A"), inline=False)
+                            if result.get("sha"):
+                                embed.add_field(name="Merge Commit", value=f"`{result['sha'][:8]}`", inline=True)
+                            embed.set_footer(text=f"Approved by {interaction.user.display_name}")
+                        else:
+                            embed = discord.Embed(
+                                title="❌ PR Approval Failed",
+                                description=result["message"],
+                                color=discord.Color.red()
+                            )
+                    except asyncio.TimeoutError:
+                        embed = discord.Embed(
+                            title="⏱️ PR Approval Timeout",
+                            description=f"PR #{pr_number} approval is taking longer than expected.",
+                            color=discord.Color.orange()
+                        )
+                        embed.add_field(name="Suggestion", value="Try again in a moment.", inline=False)
+                        logger.warning(f"Orchestrator PR approval timeout for user {interaction.user}: PR #{pr_number}")
                 else:
                     embed = discord.Embed(
                         title="❌ GitHub Integration Not Available",
-                        description="PR approval requires full orchestrator with GitHub integration",
+                        description="PR approval requires GitHub integration. Please check:\n" +
+                                  "• `GITHUB_TOKEN` environment variable is set\n" +
+                                  "• `GITHUB_REPO` environment variable is set\n" +
+                                  "• Token has repository write permissions",
                         color=discord.Color.red()
                     )
                 
-                await interaction.followup.send(embed=embed)
+                # Send the response
+                if embed:
+                    await interaction.followup.send(embed=embed)
+                else:
+                    await interaction.followup.send("⚠️ An unexpected error occurred while processing the PR approval.")
                 
             except Exception as e:
                 logger.error(f"Approve PR command failed: {e}")
@@ -362,61 +538,163 @@ class FullDiscordBot(discord.Client):
         @app_commands.describe(limit="Maximum number of PRs to show (default: 10)")
         async def pending_prs_command(interaction: discord.Interaction, limit: Optional[int] = 10):
             """Display all pending pull requests"""
+            # CRITICAL: Defer immediately to prevent timeout
             await interaction.response.defer()
             
             try:
                 # Limit the number to reasonable bounds
                 limit = min(max(1, limit or 10), 20)
                 
-                if self.orchestrator and hasattr(self.orchestrator, 'list_pending_prs'):
-                    result = await self.orchestrator.list_pending_prs(limit)
+                # Simplified approach - direct execution without nested async function
+                embed = None
+                
+                # Try to get GitHub client from orchestrator first
+                github_client = None
+                if self.orchestrator and hasattr(self.orchestrator, 'github_client'):
+                    github_client = self.orchestrator.github_client
+                elif self.backend_agent and hasattr(self.backend_agent, 'github_client'):
+                    github_client = self.backend_agent.github_client
+                
+                if github_client:
+                    try:
+                        # Get PRs directly from GitHub client with timeout
+                        prs = await asyncio.wait_for(
+                            github_client.list_pull_requests(state="open", limit=limit),
+                            timeout=20
+                        )
+                        
+                        if not prs:
+                            embed = discord.Embed(
+                                title="📭 No Pending PRs",
+                                description="There are no open pull requests awaiting approval.",
+                                color=discord.Color.green()
+                            )
+                        else:
+                            # Create embed with PR list
+                            embed = discord.Embed(
+                                title=f"📋 Pending Pull Requests ({len(prs)})",
+                                description=f"Repository: `{github_client.github_repo}`",
+                                color=discord.Color.blue()
+                            )
+                            
+                            for pr in prs:
+                                # Create status indicators
+                                status_parts = []
+                                if pr.get("draft"):
+                                    status_parts.append("🚧 Draft")
+                                if not pr.get("mergeable"):
+                                    status_parts.append("⚠️ Conflicts")
+                                
+                                # Review status indicator
+                                review_status = pr.get("review_status", "pending")
+                                if review_status == "approved":
+                                    status_parts.append("✅ Approved")
+                                elif review_status == "changes_requested":
+                                    status_parts.append("🔄 Changes Requested")
+                                
+                                status_text = " • ".join(status_parts) if status_parts else "Ready for review"
+                                
+                                # Format branch info
+                                branch_info = f"`{pr.get('head_branch', 'unknown')}` → `{pr.get('base_branch', 'main')}`"
+                                
+                                # Create field value
+                                field_value = f"**Author:** {pr.get('author', 'unknown')}\n"
+                                field_value += f"**Branch:** {branch_info}\n"
+                                field_value += f"**Status:** {status_text}\n"
+                                field_value += f"**Files:** {pr.get('files_changed', 0)} changed (+{pr.get('additions', 0)} -{pr.get('deletions', 0)})\n"
+                                field_value += f"[View PR]({pr.get('url', '#')})"
+                                
+                                embed.add_field(
+                                    name=f"#{pr.get('number')} - {pr.get('title', 'No title')[:40]}{'...' if len(pr.get('title', '')) > 40 else ''}",
+                                    value=field_value,
+                                    inline=False
+                                )
+                            
+                            embed.set_footer(text="💡 Use /approve [pr-number] to approve and merge")
                     
-                    if not result["success"]:
+                    except asyncio.TimeoutError:
+                        embed = discord.Embed(
+                            title="⏱️ PR Retrieval Timeout",
+                            description="Retrieving PRs is taking longer than expected. This may be due to GitHub API delays.",
+                            color=discord.Color.orange()
+                        )
+                        embed.add_field(name="Suggestion", value="Try again in a moment or check GitHub directly.", inline=False)
+                        logger.warning(f"Pending PRs command timeout for user {interaction.user}")
+                    except Exception as github_error:
+                        logger.error(f"GitHub API error: {github_error}")
                         embed = discord.Embed(
                             title="❌ Failed to Load PRs",
-                            description=result["message"],
+                            description=f"GitHub API error: {str(github_error)}",
                             color=discord.Color.red()
                         )
-                        await interaction.followup.send(embed=embed)
-                        return
-                    
-                    prs = result.get("prs", [])
-                    
-                    if not prs:
-                        embed = discord.Embed(
-                            title="📭 No Pending PRs",
-                            description="There are no open pull requests awaiting approval.",
-                            color=discord.Color.green()
-                        )
-                    else:
-                        # Create embed with PR list
-                        embed = discord.Embed(
-                            title=f"📋 Pending Pull Requests ({len(prs)})",
-                            color=discord.Color.blue()
+                
+                elif self.orchestrator and hasattr(self.orchestrator, 'list_pending_prs'):
+                    try:
+                        # Fallback to orchestrator method with timeout
+                        result = await asyncio.wait_for(
+                            self.orchestrator.list_pending_prs(limit),
+                            timeout=20
                         )
                         
-                        for pr in prs:
-                            pr_status = f"by {pr.get('author', 'unknown')}"
-                            if pr.get("draft"):
-                                pr_status = "🚧 Draft • " + pr_status
-                            if not pr.get("mergeable"):
-                                pr_status = "⚠️ Conflicts • " + pr_status
-                            
-                            embed.add_field(
-                                name=f"#{pr.get('number')} - {pr.get('title', 'No title')[:50]}",
-                                value=f"{pr_status}\n[View PR]({pr.get('url', '#')})",
-                                inline=False
+                        if not result["success"]:
+                            embed = discord.Embed(
+                                title="❌ Failed to Load PRs",
+                                description=result["message"],
+                                color=discord.Color.red()
                             )
-                        
-                        embed.set_footer(text="Use /approve [pr-number] to approve")
+                        else:
+                            prs = result.get("prs", [])
+                            
+                            if not prs:
+                                embed = discord.Embed(
+                                    title="📭 No Pending PRs",
+                                    description="There are no open pull requests awaiting approval.",
+                                    color=discord.Color.green()
+                                )
+                            else:
+                                # Create embed with PR list
+                                embed = discord.Embed(
+                                    title=f"📋 Pending Pull Requests ({len(prs)})",
+                                    color=discord.Color.blue()
+                                )
+                                
+                                for pr in prs:
+                                    pr_status = f"by {pr.get('author', 'unknown')}"
+                                    if pr.get("draft"):
+                                        pr_status = "🚧 Draft • " + pr_status
+                                    if not pr.get("mergeable"):
+                                        pr_status = "⚠️ Conflicts • " + pr_status
+                                    
+                                    embed.add_field(
+                                        name=f"#{pr.get('number')} - {pr.get('title', 'No title')[:50]}",
+                                        value=f"{pr_status}\n[View PR]({pr.get('url', '#')})",
+                                        inline=False
+                                    )
+                                
+                                embed.set_footer(text="Use /approve [pr-number] to approve")
+                    except asyncio.TimeoutError:
+                        embed = discord.Embed(
+                            title="⏱️ PR Retrieval Timeout",
+                            description="Retrieving PRs is taking longer than expected.",
+                            color=discord.Color.orange()
+                        )
+                        embed.add_field(name="Suggestion", value="Try again in a moment.", inline=False)
+                        logger.warning(f"Orchestrator pending PRs timeout for user {interaction.user}")
                 else:
                     embed = discord.Embed(
                         title="❌ GitHub Integration Not Available",
-                        description="PR listing requires full orchestrator with GitHub integration",
+                        description="GitHub integration is not properly configured. Please check:\n" +
+                                  "• `GITHUB_TOKEN` environment variable is set\n" +
+                                  "• `GITHUB_REPO` environment variable is set\n" +
+                                  "• Token has repository access permissions",
                         color=discord.Color.red()
                     )
                 
-                await interaction.followup.send(embed=embed)
+                # Send the response
+                if embed:
+                    await interaction.followup.send(embed=embed)
+                else:
+                    await interaction.followup.send("⚠️ An unexpected error occurred while retrieving pending PRs.")
                 
             except Exception as e:
                 logger.error(f"Pending PRs command failed: {e}")
@@ -425,9 +703,14 @@ class FullDiscordBot(discord.Client):
         @self.tree.command(name="emergency-stop", description="🚨 Emergency stop all agent activities")
         async def emergency_stop_command(interaction: discord.Interaction):
             """Emergency stop command for critical situations"""
+            # CRITICAL: Defer immediately to prevent timeout
             await interaction.response.defer()
             
             try:
+                # Simplified approach - direct execution without nested async function
+                # This is an emergency command so it should be fast and simple
+                self.agent_status = {k: 'stopped' for k in self.agent_status.keys()}
+                
                 if self.orchestrator and hasattr(self.orchestrator, 'update_status'):
                     # TODO: Implement proper emergency stop
                     embed = discord.Embed(
@@ -435,16 +718,15 @@ class FullDiscordBot(discord.Client):
                         description="All agent activities have been halted.\nUse `/status` to check system state.",
                         color=discord.Color.red()
                     )
-                    self.agent_status = {k: 'stopped' for k in self.agent_status.keys()}
                 else:
                     embed = discord.Embed(
                         title="🚨 Emergency Stop (Basic)",
                         description="Bot commands disabled. Restart required for full functionality.",
                         color=discord.Color.red()
                     )
-                    self.agent_status = {k: 'stopped' for k in self.agent_status.keys()}
                 
                 await interaction.followup.send(embed=embed)
+                logger.info(f"Emergency stop activated by {interaction.user}")
                 
             except Exception as e:
                 logger.error(f"Emergency stop command failed: {e}")
@@ -495,6 +777,17 @@ class FullDiscordBot(discord.Client):
                                 await result
                         except Exception as prep_error:
                             logger.warning(f"Backend preparation failed: {prep_error}")
+                    
+                    # Initialize GitHub client for backend agent
+                    try:
+                        github_success = await self.backend_agent.initialize_github_client()
+                        if github_success:
+                            logger.info("✅ Backend agent GitHub client initialized")
+                        else:
+                            logger.warning("⚠️ Backend agent GitHub initialization failed")
+                    except Exception as github_error:
+                        logger.warning(f"Backend GitHub initialization error: {github_error}")
+                    
                     self.agent_status['backend'] = 'ready'
                     logger.info("✅ Backend agent ready")
                     
@@ -518,6 +811,13 @@ class FullDiscordBot(discord.Client):
                     'backend': 'unavailable',
                     'database': 'unavailable'
                 }
+            
+            # Start safety monitoring
+            try:
+                self.safety_monitor.start_monitoring()
+                logger.info("✅ Safety monitoring started")
+            except Exception as e:
+                logger.warning(f"Failed to start safety monitoring: {e}")
             
             # Sync slash commands with improved error handling
             guild_id = os.getenv('DISCORD_GUILD_ID')
@@ -588,21 +888,30 @@ class FullDiscordBot(discord.Client):
         """Handle slash command errors."""
         logger.error(f"Slash command error: {error}")
         
-        if isinstance(error, app_commands.CommandOnCooldown):
-            await interaction.response.send_message(
-                f"⏰ Command on cooldown. Try again in {error.retry_after:.2f} seconds.",
-                ephemeral=True
-            )
-        elif isinstance(error, app_commands.MissingPermissions):
-            await interaction.response.send_message(
-                "❌ You don't have permission to use this command.",
-                ephemeral=True
-            )
-        else:
-            await interaction.response.send_message(
-                "❌ An error occurred while processing your command.",
-                ephemeral=True
-            )
+        # Determine appropriate response method based on interaction state
+        try:
+            if isinstance(error, app_commands.CommandOnCooldown):
+                message = f"⏰ Command on cooldown. Try again in {error.retry_after:.2f} seconds."
+            elif isinstance(error, app_commands.MissingPermissions):
+                message = "❌ You don't have permission to use this command."
+            else:
+                message = "❌ An error occurred while processing your command."
+            
+            # Use appropriate response method based on interaction state
+            if interaction.response.is_done():
+                # Interaction already responded to, use followup
+                await interaction.followup.send(message, ephemeral=True)
+            else:
+                # No response yet, use initial response
+                await interaction.response.send_message(message, ephemeral=True)
+                
+        except Exception as send_error:
+            logger.error(f"Failed to send error message: {send_error}")
+            # Last resort - try to edit the original response if it exists
+            try:
+                await interaction.edit_original_response(content="❌ An error occurred.")
+            except:
+                pass  # Give up gracefully
 
 
 def create_bot() -> FullDiscordBot:

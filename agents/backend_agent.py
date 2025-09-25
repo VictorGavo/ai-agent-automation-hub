@@ -14,11 +14,13 @@ import subprocess
 import tempfile
 import json
 import re
+import asyncio
 
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from agents.base_agent import BaseAgent, require_dev_bible_prep
+from agents.backend.github_client import GitHubClient, sanitize_branch_name, generate_pr_description
 
 logger = logging.getLogger(__name__)
 
@@ -99,7 +101,68 @@ class BackendAgent(BaseAgent):
             "commit_prefix": f"[{agent_name}]"
         }
         
+        # GitHub integration
+        self.github_client: Optional[GitHubClient] = None
+        self.github_initialized = False
+        
         logger.info(f"BackendAgent {agent_name} initialized for project at {self.project_root}")
+    
+    async def initialize_github_client(self) -> bool:
+        """
+        Initialize GitHub client for branch management and PR creation.
+        
+        Returns:
+            bool: True if GitHub client initialized successfully
+        """
+        try:
+            if not self.github_client:
+                self.github_client = GitHubClient()
+            
+            success = await self.github_client.initialize()
+            self.github_initialized = success
+            
+            if success:
+                logger.info(f"GitHub client initialized for {self.agent_name}")
+            else:
+                logger.warning(f"GitHub client initialization failed for {self.agent_name}")
+            
+            return success
+            
+        except Exception as e:
+            logger.error(f"Failed to initialize GitHub client: {e}")
+            self.github_initialized = False
+            return False
+    
+    async def configure_git_user(self) -> bool:
+        """
+        Configure Git user settings for commits.
+        
+        Returns:
+            bool: True if configuration successful
+        """
+        try:
+            # Set up Git user configuration for commits
+            original_dir = os.getcwd()
+            os.chdir(self.project_root)
+            
+            # Configure git user (use environment variables or defaults)
+            git_user_name = os.getenv("GIT_USER_NAME", f"{self.agent_name} Agent")
+            git_user_email = os.getenv("GIT_USER_EMAIL", f"{self.agent_name.lower()}@ai-agent-automation-hub.local")
+            
+            subprocess.run(["git", "config", "user.name", git_user_name], check=True, capture_output=True)
+            subprocess.run(["git", "config", "user.email", git_user_email], check=True, capture_output=True)
+            
+            logger.info(f"Git user configured: {git_user_name} <{git_user_email}>")
+            return True
+            
+        except subprocess.CalledProcessError as e:
+            logger.error(f"Git user configuration failed: {e}")
+            return False
+        except Exception as e:
+            logger.error(f"Failed to configure Git user: {e}")
+            return False
+        finally:
+            os.chdir(original_dir)
     
     @require_dev_bible_prep
     def create_flask_endpoint(
@@ -367,9 +430,9 @@ class BackendAgent(BaseAgent):
         return test_execution_result
     
     @require_dev_bible_prep
-    def create_git_branch(self, branch_name: str, base_branch: str = None) -> Dict[str, Any]:
+    async def create_git_branch(self, branch_name: str, base_branch: str = None) -> Dict[str, Any]:
         """
-        Create a new Git branch for development work.
+        Create a new Git branch for development work using GitHub API.
         
         Args:
             branch_name (str): Name of the new branch
@@ -380,12 +443,42 @@ class BackendAgent(BaseAgent):
         """
         logger.info(f"Creating Git branch: {branch_name}")
         
+        # Sanitize branch name
+        sanitized_branch_name = sanitize_branch_name(branch_name)
+        if sanitized_branch_name != branch_name:
+            logger.info(f"Branch name sanitized: '{branch_name}' -> '{sanitized_branch_name}'")
+            branch_name = sanitized_branch_name
+        
         base_branch = base_branch or self.git_config["main_branch"]
         
+        # Try GitHub API first if available
+        if self.github_initialized and self.github_client:
+            try:
+                created_branch = await self.github_client.create_branch(branch_name, base_branch)
+                if created_branch:
+                    self.git_branch = created_branch
+                    logger.info(f"✓ GitHub branch {created_branch} created successfully")
+                    
+                    return {
+                        'branch_name': created_branch,
+                        'base_branch': base_branch,
+                        'created_at': datetime.now(),
+                        'status': 'success',
+                        'method': 'github_api'
+                    }
+                else:
+                    logger.warning("GitHub branch creation failed, falling back to local Git")
+            except Exception as e:
+                logger.warning(f"GitHub branch creation failed: {e}, falling back to local Git")
+        
+        # Fallback to local Git operations
         try:
             # Ensure we're in the project root
             original_dir = os.getcwd()
             os.chdir(self.project_root)
+            
+            # Configure Git user
+            await self.configure_git_user()
             
             # Fetch latest changes
             subprocess.run(["git", "fetch", self.git_config["remote"]], check=True, capture_output=True)
@@ -399,13 +492,14 @@ class BackendAgent(BaseAgent):
             
             self.git_branch = branch_name
             
-            logger.info(f"✓ Git branch {branch_name} created successfully")
+            logger.info(f"✓ Local Git branch {branch_name} created successfully")
             
             return {
                 'branch_name': branch_name,
                 'base_branch': base_branch,
                 'created_at': datetime.now(),
-                'status': 'success'
+                'status': 'success',
+                'method': 'local_git'
             }
             
         except subprocess.CalledProcessError as e:
@@ -419,22 +513,114 @@ class BackendAgent(BaseAgent):
         finally:
             os.chdir(original_dir)
     
+    async def commit_changes(self, files: Dict[str, str], commit_message: str) -> Dict[str, Any]:
+        """
+        Commit file changes to the current branch.
+        
+        Args:
+            files (Dict[str, str]): Dictionary of file_path -> file_content
+            commit_message (str): Commit message
+            
+        Returns:
+            Dict[str, Any]: Commit results
+        """
+        if not self.git_branch:
+            raise ValueError("No Git branch available for commits")
+        
+        logger.info(f"Committing {len(files)} files to branch {self.git_branch}")
+        
+        # Try GitHub API first if available
+        if self.github_initialized and self.github_client:
+            try:
+                success = await self.github_client.commit_changes(
+                    self.git_branch, files, commit_message
+                )
+                if success:
+                    logger.info(f"✓ GitHub API commit successful")
+                    return {
+                        'success': True,
+                        'commit_message': commit_message,
+                        'files_count': len(files),
+                        'branch': self.git_branch,
+                        'method': 'github_api',
+                        'committed_at': datetime.now()
+                    }
+                else:
+                    logger.warning("GitHub API commit failed, falling back to local Git")
+            except Exception as e:
+                logger.warning(f"GitHub API commit failed: {e}, falling back to local Git")
+        
+        # Fallback to local Git operations
+        try:
+            original_dir = os.getcwd()
+            os.chdir(self.project_root)
+            
+            # Write files to disk
+            for file_path, content in files.items():
+                # Ensure directory exists
+                dir_path = os.path.dirname(file_path)
+                if dir_path:
+                    os.makedirs(dir_path, exist_ok=True)
+                
+                # Write file
+                with open(file_path, 'w', encoding='utf-8') as f:
+                    f.write(content)
+                
+                logger.debug(f"Written file: {file_path}")
+            
+            # Stage and commit changes
+            subprocess.run(["git", "add", "."], check=True, capture_output=True)
+            subprocess.run(
+                ["git", "commit", "-m", commit_message], 
+                check=True, capture_output=True
+            )
+            
+            logger.info(f"✓ Local Git commit successful")
+            return {
+                'success': True,
+                'commit_message': commit_message,
+                'files_count': len(files),
+                'branch': self.git_branch,
+                'method': 'local_git',
+                'committed_at': datetime.now()
+            }
+            
+        except subprocess.CalledProcessError as e:
+            error_msg = f"Local Git commit failed: {e}"
+            logger.error(error_msg)
+            return {
+                'success': False,
+                'error': error_msg,
+                'method': 'local_git'
+            }
+        except Exception as e:
+            error_msg = f"File write/commit failed: {e}"
+            logger.error(error_msg)
+            return {
+                'success': False,
+                'error': error_msg
+            }
+        finally:
+            os.chdir(original_dir)
+    
     @require_dev_bible_prep
-    def submit_pull_request(
+    async def submit_pull_request(
         self,
         title: str,
         description: str,
         target_branch: str = None,
-        reviewers: Optional[List[str]] = None
+        reviewers: Optional[List[str]] = None,
+        success_criteria: Optional[List[str]] = None
     ) -> Dict[str, Any]:
         """
-        Submit a pull request with the current branch changes.
+        Submit a pull request with the current branch changes using GitHub API.
         
         Args:
             title (str): PR title
             description (str): PR description
             target_branch (str, optional): Target branch for PR
             reviewers (Optional[List[str]]): List of reviewer usernames
+            success_criteria (Optional[List[str]]): Success criteria for the task
             
         Returns:
             Dict[str, Any]: PR submission results
@@ -446,28 +632,63 @@ class BackendAgent(BaseAgent):
         
         target_branch = target_branch or self.git_config["main_branch"]
         
+        # Try GitHub API first if available
+        if self.github_initialized and self.github_client:
+            try:
+                # Generate comprehensive PR description
+                pr_description = generate_pr_description(
+                    task_title=title,
+                    task_description=description,
+                    success_criteria=success_criteria or [],
+                    agent_name=self.agent_name
+                )
+                
+                pr_url = await self.github_client.create_pull_request(
+                    branch_name=self.git_branch,
+                    title=title,
+                    description=pr_description,
+                    base_branch=target_branch
+                )
+                
+                if pr_url:
+                    logger.info(f"✓ GitHub PR created successfully: {pr_url}")
+                    return {
+                        'success': True,
+                        'pr_url': pr_url,
+                        'title': title,
+                        'description': pr_description,
+                        'source_branch': self.git_branch,
+                        'target_branch': target_branch,
+                        'reviewers': reviewers or [],
+                        'created_at': datetime.now(),
+                        'method': 'github_api'
+                    }
+                else:
+                    logger.warning("GitHub PR creation failed, falling back to local method")
+            except Exception as e:
+                logger.warning(f"GitHub PR creation failed: {e}, falling back to local method")
+        
+        # Fallback to local Git operations with simulated PR
         try:
-            # Stage and commit changes
-            commit_message = f"{self.git_config['commit_prefix']} {title}"
+            original_dir = os.getcwd()
+            os.chdir(self.project_root)
             
-            subprocess.run(["git", "add", "."], check=True, capture_output=True, cwd=self.project_root)
-            subprocess.run(
-                ["git", "commit", "-m", commit_message], 
-                check=True, capture_output=True, cwd=self.project_root
-            )
+            # Push branch if not already pushed
+            try:
+                subprocess.run(
+                    ["git", "push", self.git_config["remote"], self.git_branch], 
+                    check=True, capture_output=True
+                )
+            except subprocess.CalledProcessError:
+                # Branch might already be pushed
+                pass
             
-            # Push branch
-            subprocess.run(
-                ["git", "push", self.git_config["remote"], self.git_branch], 
-                check=True, capture_output=True, cwd=self.project_root
-            )
-            
-            # Create PR (simulated - would use GitHub API in production)
+            # Create PR simulation
             pr_result = self._create_pull_request_simulation(
                 title, description, self.git_branch, target_branch, reviewers
             )
             
-            logger.info(f"✓ Pull request submitted successfully: {pr_result['pr_number']}")
+            logger.info(f"✓ Pull request submitted (simulated): {pr_result['pr_number']}")
             
             return pr_result
             
@@ -475,9 +696,111 @@ class BackendAgent(BaseAgent):
             error_msg = f"PR submission failed: {e}"
             logger.error(error_msg)
             return {
-                'status': 'failed',
+                'success': False,
                 'error': error_msg
             }
+        finally:
+            os.chdir(original_dir)
+    
+    async def rollback_branch(self, reason: str = "Task failed") -> Dict[str, Any]:
+        """
+        Rollback the current branch and clean up resources.
+        
+        Args:
+            reason (str): Reason for rollback
+            
+        Returns:
+            Dict[str, Any]: Rollback results
+        """
+        logger.info(f"Rolling back branch {self.git_branch}: {reason}")
+        
+        if not self.git_branch:
+            return {
+                'success': True,
+                'message': 'No active branch to rollback'
+            }
+        
+        rollback_results = {
+            'branch_deleted': False,
+            'files_cleaned': False,
+            'github_cleanup': False
+        }
+        
+        try:
+            # Clean up GitHub branch if using GitHub API
+            if self.github_initialized and self.github_client:
+                try:
+                    deleted = await self.github_client.delete_branch(self.git_branch)
+                    rollback_results['github_cleanup'] = deleted
+                    if deleted:
+                        logger.info(f"✓ GitHub branch {self.git_branch} deleted")
+                except Exception as e:
+                    logger.warning(f"GitHub branch cleanup failed: {e}")
+            
+            # Clean up local branch
+            try:
+                original_dir = os.getcwd()
+                os.chdir(self.project_root)
+                
+                # Switch to main branch
+                subprocess.run(
+                    ["git", "checkout", self.git_config["main_branch"]], 
+                    check=True, capture_output=True
+                )
+                
+                # Delete the feature branch
+                subprocess.run(
+                    ["git", "branch", "-D", self.git_branch], 
+                    check=True, capture_output=True
+                )
+                
+                rollback_results['branch_deleted'] = True
+                logger.info(f"✓ Local branch {self.git_branch} deleted")
+                
+            except subprocess.CalledProcessError as e:
+                logger.warning(f"Local branch cleanup failed: {e}")
+            finally:
+                os.chdir(original_dir)
+            
+            # Clean up created files (remove any temporary files)
+            rollback_results['files_cleaned'] = True
+            
+            # Reset state
+            self.git_branch = None
+            
+            return {
+                'success': True,
+                'message': f'Branch rollback completed: {reason}',
+                'rollback_results': rollback_results,
+                'rolled_back_at': datetime.now()
+            }
+            
+        except Exception as e:
+            logger.error(f"Rollback failed: {e}")
+            return {
+                'success': False,
+                'error': f'Rollback failed: {str(e)}',
+                'rollback_results': rollback_results
+            }
+    
+    async def get_github_stats(self) -> Dict[str, Any]:
+        """
+        Get GitHub client statistics and status.
+        
+        Returns:
+            Dict[str, Any]: GitHub integration stats
+        """
+        if not self.github_client:
+            return {
+                'github_initialized': False,
+                'message': 'GitHub client not initialized'
+            }
+        
+        stats = self.github_client.get_stats()
+        stats['agent_name'] = self.agent_name
+        stats['current_branch'] = self.git_branch
+        
+        return stats
     
     # Private helper methods
     

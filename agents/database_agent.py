@@ -13,10 +13,9 @@ from typing import Dict, List, Any, Optional, Union, Tuple
 from datetime import datetime
 import json
 import re
-import psycopg2
-from psycopg2 import sql
 import sqlalchemy
 from sqlalchemy import create_engine, text, inspect
+import sqlite3
 
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -83,13 +82,18 @@ class DatabaseAgent(BaseAgent):
         """
         super().__init__(agent_name, "database", dev_bible_path)
         
-        # Database configuration
+        # Database configuration - auto-detect from environment
+        database_url = os.getenv("DATABASE_URL", "sqlite:///./data/local_test.db")
+        self.database_url = database_url
+        self.database_type = "sqlite" if database_url.startswith("sqlite") else "postgresql"
+        
+        # Default configuration for backward compatibility
         self.database_config = database_config or {
             "host": "localhost",
-            "port": "5432", 
-            "database": "automation_hub",
-            "user": "postgres",
-            "password": "postgres"
+            "port": "5432" if self.database_type == "postgresql" else None, 
+            "database": "automation_hub" if self.database_type == "postgresql" else database_url,
+            "user": "postgres" if self.database_type == "postgresql" else None,
+            "password": "postgres" if self.database_type == "postgresql" else None
         }
         
         # Design tracking
@@ -97,15 +101,19 @@ class DatabaseAgent(BaseAgent):
         self.migrations: List[Dict[str, Any]] = []
         self.performance_metrics: Dict[str, Any] = {}
         
-        # PostgreSQL best practices patterns
-        self.best_practices = {
-            "naming_conventions": {
-                "table": r"^[a-z][a-z0-9_]*[a-z0-9]$",
-                "column": r"^[a-z][a-z0-9_]*[a-z0-9]$", 
-                "index": r"^idx_[a-z][a-z0-9_]*[a-z0-9]$",
-                "constraint": r"^(pk|fk|ck|uq)_[a-z][a-z0-9_]*[a-z0-9]$"
-            },
-            "data_types": {
+        # Database best practices patterns (adapted for current database type)
+        if self.database_type == "sqlite":
+            data_types = {
+                "id": "INTEGER PRIMARY KEY AUTOINCREMENT",
+                "uuid": "TEXT",  # SQLite doesn't have native UUID
+                "created_at": "DATETIME DEFAULT CURRENT_TIMESTAMP",
+                "updated_at": "DATETIME DEFAULT CURRENT_TIMESTAMP",
+                "email": "TEXT",
+                "username": "TEXT",
+                "description": "TEXT"
+            }
+        else:  # PostgreSQL
+            data_types = {
                 "id": "SERIAL PRIMARY KEY",
                 "uuid": "UUID DEFAULT gen_random_uuid()",
                 "created_at": "TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
@@ -113,12 +121,21 @@ class DatabaseAgent(BaseAgent):
                 "email": "VARCHAR(255)",
                 "username": "VARCHAR(50)",
                 "description": "TEXT"
+            }
+            
+        self.best_practices = {
+            "naming_conventions": {
+                "table": r"^[a-z][a-z0-9_]*[a-z0-9]$",
+                "column": r"^[a-z][a-z0-9_]*[a-z0-9]$", 
+                "index": r"^idx_[a-z][a-z0-9_]*[a-z0-9]$",
+                "constraint": r"^(pk|fk|ck|uq)_[a-z][a-z0-9_]*[a-z0-9]$"
             },
+            "data_types": data_types,
             "security_rules": [
                 "Always use parameterized queries",
                 "Implement proper access controls",
                 "Encrypt sensitive data",
-                "Use connection pooling",
+                "Use connection pooling" if self.database_type == "postgresql" else "Use proper transaction management",
                 "Validate all inputs"
             ]
         }
@@ -126,7 +143,7 @@ class DatabaseAgent(BaseAgent):
         # Migration tracking
         self.migration_counter = 1
         
-        logger.info(f"DatabaseAgent {agent_name} initialized with PostgreSQL capabilities")
+        logger.info(f"DatabaseAgent {agent_name} initialized with {self.database_type.upper()} capabilities")
     
     @require_dev_bible_prep
     def design_schema(

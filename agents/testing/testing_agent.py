@@ -46,7 +46,7 @@ class TestingAgent:
     def __init__(self):
         """Initialize the testing agent."""
         self.github_client = GitHubClient()
-        self.orchestrator_client = OrchestratorClient()
+        self.orchestrator_client = OrchestratorClient("testing-agent")
         self.test_runner = TestRunner()
         
         # Configuration

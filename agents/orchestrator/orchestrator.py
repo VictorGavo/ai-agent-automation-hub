@@ -1068,6 +1068,184 @@ class OrchestratorAgent:
             logger.error(f"Failed to get testing logs: {e}")
             return {"success": False, "message": f"Error retrieving logs: {str(e)}"}
 
+    def assess_task_complexity(self, task_description: str) -> Dict[str, Any]:
+        """
+        Assess the complexity level of a task based on its description.
+        
+        Args:
+            task_description (str): Task description to analyze
+            
+        Returns:
+            Dict[str, Any]: Assessment result containing:
+                - complexity: Complexity level (simple, moderate, complex, unclear)
+                - needs_clarification: Boolean indicating if clarification is needed
+                - questions: List of clarifying questions if needed
+                - estimated_hours: Estimated time to complete (float)
+                - category: Task category based on description
+        """
+        try:
+            description_lower = task_description.lower().strip()
+            
+            # Define complexity patterns (check simple first, then moderate, then complex)
+            complexity_patterns = {
+                "simple": [
+                    r'\b(simple|basic|easy|quick|small|single)\b',
+                    r'\bcreate\s+(single|one|simple|basic)\b',
+                    r'\bsimple\s+\w+',
+                    r'\bbasic\s+\w+',
+                    r'\bfix\s+(bug|issue|typo|error|login|the)\b',
+                    r'\badd\s+(single|one|simple)\b',
+                    r'\bupdate\s+\w+\s+field\b',
+                    r'\bhealth\s+check\b'
+                ],
+                "moderate": [
+                    r'\bapi\s+\w+\b',
+                    r'\bendpoint\s+\w+\b',
+                    r'\bintegration\b',
+                    r'\bworkflow\b',
+                    r'\bservice\b',
+                    r'\bmultiple\s+\w+\b',
+                    r'\bwith\s+(database|authentication|validation|security)\b',
+                    r'\brest\s+api|graphql|websocket\b',
+                    r'\bfrontend|backend|full-stack\b',
+                    r'\bauthentication\s+system\b'
+                ],
+                "complex": [
+                    r'\b(system|architecture|migration|refactor|infrastructure)\b',
+                    r'\bmulti-step|complex|advanced|comprehensive\b',
+                    r'\bintegrate\s+multiple\b',
+                    r'\bfull\s+(system|stack|application)\b',
+                    r'\bscalable|distributed|microservice\b',
+                    r'\barchitecture\b'
+                ]
+            }
+            
+            # Assess complexity (check in order: simple -> moderate -> complex)
+            complexity = "unclear"
+            for level in ["simple", "moderate", "complex"]:
+                patterns = complexity_patterns[level]
+                if any(re.search(pattern, description_lower) for pattern in patterns):
+                    complexity = level
+                    break
+            
+            # Determine if clarification is needed
+            needs_clarification = False
+            questions = []
+            
+            # Check for unclear descriptions
+            if (complexity == "unclear" or 
+                len(description_lower.split()) < 3 or
+                any(vague_word in description_lower for vague_word in 
+                    ["something", "stuff", "thing", "maybe", "probably"])):
+                needs_clarification = True
+                questions = [
+                    "What specific functionality or feature should be implemented?",
+                    "What is the expected input and output?",
+                    "Are there any specific technical requirements or constraints?",
+                    "What is the priority level for this task?"
+                ]
+            
+            # Estimate hours based on complexity
+            hour_estimates = {
+                "simple": 1.0,
+                "moderate": 4.0,
+                "complex": 12.0,
+                "unclear": 2.0
+            }
+            
+            # Determine category based on keywords
+            category = "general"
+            category_keywords = {
+                "backend": ["api", "endpoint", "server", "backend", "flask", "django", "rest"],
+                "database": ["database", "db", "schema", "migration", "sql", "postgres", "mysql"],
+                "frontend": ["ui", "interface", "frontend", "react", "vue", "html", "css"],
+                "testing": ["test", "testing", "validation", "qa", "unit", "integration"],
+                "infrastructure": ["deploy", "docker", "kubernetes", "infrastructure", "ci/cd"],
+                "documentation": ["docs", "documentation", "readme", "guide", "manual"]
+            }
+            
+            for cat, keywords in category_keywords.items():
+                if any(keyword in description_lower for keyword in keywords):
+                    category = cat
+                    break
+            
+            return {
+                "complexity": complexity,
+                "needs_clarification": needs_clarification,
+                "questions": questions,
+                "estimated_hours": hour_estimates.get(complexity, 2.0),
+                "category": category,
+                "success": True
+            }
+            
+        except Exception as e:
+            logger.error(f"Error assessing task complexity: {e}")
+            return {
+                "complexity": "unclear",
+                "needs_clarification": True,
+                "questions": ["Please provide more details about this task."],
+                "estimated_hours": 2.0,
+                "category": "general",
+                "success": False,
+                "error": str(e)
+            }
+
+    def validate_task_complexity(self, task_description: str) -> Dict[str, Any]:
+        """
+        Validate task complexity and determine if clarification is needed.
+        
+        Args:
+            task_description (str): Task to validate
+            
+        Returns:
+            Dict[str, Any]: Validation results including complexity assessment
+                and clarification questions if needed
+        """
+        try:
+            logger.info(f"Validating task complexity: {task_description[:100]}...")
+            
+            # Use the assess_task_complexity method
+            complexity_result = self.assess_task_complexity(task_description)
+            
+            # Calculate confidence score based on description length and clarity
+            word_count = len(task_description.strip().split())
+            confidence_score = min(0.9, max(0.1, word_count / 10.0))  # 0.1 to 0.9 based on words
+            
+            # Determine recommended action
+            recommended_actions = {
+                "simple": "Assign directly to appropriate agent",
+                "moderate": "Break down into subtasks and assign",
+                "complex": "Detailed planning required before assignment",
+                "unclear": "Request clarification before proceeding"
+            }
+            
+            return {
+                'complexity': complexity_result['complexity'],
+                'needs_clarification': complexity_result['needs_clarification'], 
+                'clarification_questions': complexity_result['questions'],
+                'confidence_score': confidence_score,
+                'recommended_action': recommended_actions.get(complexity_result['complexity'], "Review manually"),
+                'validation_timestamp': datetime.now(timezone.utc),
+                'estimated_hours': complexity_result['estimated_hours'],
+                'category': complexity_result['category'],
+                'success': True
+            }
+            
+        except Exception as e:
+            logger.error(f"Error validating task complexity: {e}")
+            return {
+                'complexity': "unclear",
+                'needs_clarification': True,
+                'clarification_questions': ["Please provide more details about this task."],
+                'confidence_score': 0.1,
+                'recommended_action': "Request clarification",
+                'validation_timestamp': datetime.now(timezone.utc),
+                'estimated_hours': 2.0,
+                'category': "general",
+                'success': False,
+                'error': str(e)
+            }
+
     async def send_notification(self, channel: str, message: str, priority: str = "normal") -> Dict[str, Any]:
         """Send notification to Discord channel."""
         try:

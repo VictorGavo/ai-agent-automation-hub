@@ -53,6 +53,25 @@ class GitHubClient:
             # Initialize GitHub client
             self.github_client = Github(self.github_token)
             
+            # Test GitHub API authentication with a simple repository list call
+            try:
+                # Test authentication by getting user info
+                user = self.github_client.get_user()
+                logger.info(f"Authenticated as GitHub user: {user.login}")
+                
+                # Test repository access by listing user repositories (first 5)
+                repos = list(user.get_repos())[:5]
+                logger.info(f"Access to {len(repos)} repositories confirmed")
+                
+            except GithubException as auth_error:
+                logger.error(f"GitHub authentication failed: {auth_error}")
+                if auth_error.status == 401:
+                    logger.error("Invalid GitHub token - please check GITHUB_TOKEN environment variable")
+                elif auth_error.status == 403:
+                    logger.error("GitHub API rate limit exceeded or insufficient permissions")
+                self.stats["operations_failed"] += 1
+                return False
+            
             # Get repository
             self.repo = self.github_client.get_repo(self.github_repo)
             
@@ -72,6 +91,12 @@ class GitHubClient:
             
         except GithubException as e:
             logger.error(f"GitHub API error during initialization: {e}")
+            if e.status == 404:
+                logger.error(f"Repository '{self.github_repo}' not found or not accessible")
+            elif e.status == 401:
+                logger.error("Authentication failed - check GitHub token")
+            elif e.status == 403:
+                logger.error("API rate limit exceeded or insufficient permissions")
             self.stats["operations_failed"] += 1
             return False
         except Exception as e:
@@ -672,6 +697,69 @@ class GitHubClient:
             return []
         except Exception as e:
             logger.error(f"Failed to list PRs: {e}")
+            self.stats["operations_failed"] += 1
+            return []
+
+    async def list_pull_requests(self, state: str = "open", limit: int = 10) -> List[Dict[str, Any]]:
+        """
+        List pull requests with specified state (alias for list_open_pull_requests with state support)
+        
+        Args:
+            state: PR state ("open", "closed", "all")
+            limit: Maximum number of PRs to return
+            
+        Returns:
+            List of PR summaries
+        """
+        if not self.repo:
+            logger.error("GitHub client not initialized")
+            return []
+        
+        try:
+            prs = self.repo.get_pulls(state=state, sort="updated", direction="desc")
+            pr_list = []
+            
+            for i, pr in enumerate(prs):
+                if i >= limit:
+                    break
+                
+                # Get review status
+                reviews = list(pr.get_reviews())
+                review_status = "pending"
+                if reviews:
+                    latest_review = reviews[-1]
+                    review_status = latest_review.state.lower()
+                
+                pr_summary = {
+                    "number": pr.number,
+                    "title": pr.title,
+                    "author": pr.user.login,
+                    "created_at": pr.created_at.isoformat(),
+                    "updated_at": pr.updated_at.isoformat(),
+                    "head_branch": pr.head.ref,
+                    "base_branch": pr.base.ref,
+                    "draft": pr.draft,
+                    "mergeable": pr.mergeable,
+                    "mergeable_state": pr.mergeable_state,
+                    "merged": pr.merged,
+                    "url": pr.html_url,
+                    "files_changed": pr.changed_files,
+                    "additions": pr.additions,
+                    "deletions": pr.deletions,
+                    "review_status": review_status,
+                    "state": pr.state
+                }
+                pr_list.append(pr_summary)
+            
+            logger.info(f"Retrieved {len(pr_list)} {state} pull requests")
+            return pr_list
+            
+        except GithubException as e:
+            logger.error(f"GitHub API error listing {state} PRs: {e}")
+            self.stats["operations_failed"] += 1
+            return []
+        except Exception as e:
+            logger.error(f"Failed to list {state} PRs: {e}")
             self.stats["operations_failed"] += 1
             return []
 

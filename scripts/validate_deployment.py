@@ -287,16 +287,41 @@ class DeploymentValidator:
             )
         
         try:
-            import asyncpg
-            conn = await asyncpg.connect(database_url)
-            await conn.close()
-            
-            return ValidationResult(
-                component="Database",
-                test_name="Connection",
-                result=TestResult.PASS,
-                message="Database connection successful"
-            )
+            # Handle different database types
+            if database_url.startswith('sqlite'):
+                # SQLite connection test
+                import sqlite3
+                import aiosqlite
+                
+                # Extract path from sqlite URL
+                db_path = database_url.replace('sqlite:///', './').replace('sqlite://', './')
+                
+                # Ensure directory exists
+                os.makedirs(os.path.dirname(db_path), exist_ok=True)
+                
+                # Test connection
+                async with aiosqlite.connect(db_path) as conn:
+                    await conn.execute("SELECT 1")
+                    await conn.commit()
+                
+                return ValidationResult(
+                    component="Database",
+                    test_name="Connection",
+                    result=TestResult.PASS,
+                    message="SQLite database connection successful"
+                )
+            else:
+                # PostgreSQL connection test
+                import asyncpg
+                conn = await asyncpg.connect(database_url)
+                await conn.close()
+                
+                return ValidationResult(
+                    component="Database",
+                    test_name="Connection",
+                    result=TestResult.PASS,
+                    message="PostgreSQL database connection successful"
+                )
         except ImportError:
             return ValidationResult(
                 component="Database",

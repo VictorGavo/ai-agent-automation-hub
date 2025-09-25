@@ -522,21 +522,10 @@ class OrchestratorAgent(BaseAgent):
         return 'normal'
     
     def _assess_complexity(self, task_description: str) -> str:
-        """Assess task complexity using pattern matching."""
-        task_lower = task_description.lower()
-        
-        # Count matches for each complexity level
-        complexity_scores = {}
-        
-        for level, patterns in self.complexity_patterns.items():
-            score = sum(len(re.findall(pattern, task_lower)) for pattern in patterns)
-            complexity_scores[level] = score
-        
-        # Determine complexity based on highest score
-        if not any(complexity_scores.values()):
-            return TaskComplexityLevel.UNCLEAR
-        
-        return max(complexity_scores, key=complexity_scores.get)
+        """Assess task complexity using pattern matching (legacy method)."""
+        # Use the new method but return only the complexity for backward compatibility
+        result = self.assess_task_complexity(task_description)
+        return result['complexity']
     
     def _generate_clarification_questions(self, task_description: str) -> List[str]:
         """Generate clarifying questions for unclear tasks."""
@@ -630,35 +619,94 @@ class OrchestratorAgent(BaseAgent):
         logger.info(f"Updated {agent_type} agent availability: {available}")
 
 
-    def assess_task_complexity(self, description: str) -> str:
+    def assess_task_complexity(self, description: str, task_type: Optional[str] = None) -> Dict[str, Any]:
         """
-        Assess the complexity level of a task based on its description.
+        Assess the complexity level of a task based on its description and optionally task type.
+        
+        Args:
+            description: Task description to analyze
+            task_type: Optional task type for additional context
+            
+        Returns:
+            Dict containing:
+                - complexity: Complexity level (simple, moderate, complex, unclear)
+                - needs_clarification: Boolean indicating if clarification is needed
+                - questions: List of clarifying questions if needed
+        """
+        description_lower = description.lower()
+        
+        # Check for complex patterns first
+        complexity = None
+        for pattern in self.complexity_patterns[TaskComplexityLevel.COMPLEX]:
+            if re.search(pattern, description_lower):
+                complexity = TaskComplexityLevel.COMPLEX
+                break
+        
+        # Check for moderate patterns if not already complex
+        if not complexity:
+            for pattern in self.complexity_patterns[TaskComplexityLevel.MODERATE]:
+                if re.search(pattern, description_lower):
+                    complexity = TaskComplexityLevel.MODERATE
+                    break
+        
+        # Check for simple patterns if not already classified
+        if not complexity:
+            for pattern in self.complexity_patterns[TaskComplexityLevel.SIMPLE]:
+                if re.search(pattern, description_lower):
+                    complexity = TaskComplexityLevel.SIMPLE
+                    break
+        
+        # If no patterns match, it's unclear and needs clarification
+        if not complexity:
+            complexity = TaskComplexityLevel.UNCLEAR
+        
+        # Determine if clarification is needed
+        needs_clarification = complexity == TaskComplexityLevel.UNCLEAR
+        
+        # Additional clarification check based on task type mismatch or vague description
+        if task_type and not needs_clarification:
+            # Check if task type matches the complexity assessment
+            type_keywords = {
+                'backend': ['api', 'endpoint', 'server', 'backend', 'flask'],
+                'database': ['database', 'db', 'schema', 'migration', 'sql'],
+                'frontend': ['ui', 'interface', 'frontend', 'react', 'html'],
+                'testing': ['test', 'testing', 'validation', 'qa'],
+                'documentation': ['docs', 'documentation', 'readme']
+            }
+            
+            task_type_lower = task_type.lower()
+            if task_type_lower in type_keywords:
+                type_matches = any(keyword in description_lower for keyword in type_keywords[task_type_lower])
+                if not type_matches:
+                    needs_clarification = True
+        
+        # Also check for very short or vague descriptions
+        if len(description.strip().split()) < 3:
+            needs_clarification = True
+        
+        # Generate clarifying questions if needed
+        questions = []
+        if needs_clarification:
+            questions = self._generate_clarification_questions(description)
+        
+        return {
+            'complexity': complexity,
+            'needs_clarification': needs_clarification,
+            'questions': questions
+        }
+    
+    def get_task_complexity(self, description: str) -> str:
+        """
+        Get just the complexity level (simple wrapper for backward compatibility).
         
         Args:
             description: Task description to analyze
             
         Returns:
-            Complexity level (simple, moderate, complex, unclear)
+            Complexity level string (simple, moderate, complex, unclear)
         """
-        description_lower = description.lower()
-        
-        # Check for complex patterns first
-        for pattern in self.complexity_patterns[TaskComplexityLevel.COMPLEX]:
-            if re.search(pattern, description_lower):
-                return TaskComplexityLevel.COMPLEX
-        
-        # Check for moderate patterns
-        for pattern in self.complexity_patterns[TaskComplexityLevel.MODERATE]:
-            if re.search(pattern, description_lower):
-                return TaskComplexityLevel.MODERATE
-        
-        # Check for simple patterns
-        for pattern in self.complexity_patterns[TaskComplexityLevel.SIMPLE]:
-            if re.search(pattern, description_lower):
-                return TaskComplexityLevel.SIMPLE
-        
-        # If no patterns match, it's unclear and needs clarification
-        return TaskComplexityLevel.UNCLEAR
+        result = self.assess_task_complexity(description)
+        return result['complexity']
     
     # ============ DISCORD INTEGRATION METHODS ============
     
@@ -680,7 +728,7 @@ class OrchestratorAgent(BaseAgent):
             task_id = f"task_{len(self.task_queue) + 1}_{datetime.now().strftime('%H%M%S')}"
             
             # Analyze task complexity
-            complexity = self.assess_task_complexity(description)
+            complexity_result = self.assess_task_complexity(description)
             
             # Create task entry
             task = {
@@ -689,17 +737,17 @@ class OrchestratorAgent(BaseAgent):
                 'user_id': user_id,
                 'channel_id': channel_id,
                 'priority': priority or 'medium',
-                'complexity': complexity,
+                'complexity': complexity_result['complexity'],
                 'status': 'assigned',
                 'created_at': datetime.now().isoformat(),
-                'requires_clarification': complexity == TaskComplexityLevel.UNCLEAR
+                'requires_clarification': complexity_result['needs_clarification']
             }
             
             self.task_queue.append(task)
             
             if task['requires_clarification']:
-                # Generate clarification questions
-                questions = self._generate_clarification_questions(description)
+                # Use questions from complexity assessment
+                questions = complexity_result['questions']
                 return {
                     'success': True,
                     'task_id': task_id,

@@ -9,14 +9,18 @@ bible integration, task preparation, and validation functionality.
 import os
 import sys
 import logging
+import threading
+import time
 from typing import Optional, Dict, Any, Callable
 from functools import wraps
-from datetime import datetime
+from datetime import datetime, timezone
 
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from utils.dev_bible_reader import DevBibleReader, enforce_dev_bible_reading
+from utils.task_state_manager import get_task_state_manager, TaskState, CheckpointType
+from utils.safe_git_operations import get_safe_git_operations
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -122,6 +126,14 @@ class BaseAgent:
         # Agent metadata
         self.creation_timestamp = datetime.now()
         self.task_history: list = []
+        
+        # Reliability system components
+        self.task_state_manager = get_task_state_manager()
+        self.safe_git = get_safe_git_operations()
+        self.current_task_id: Optional[str] = None
+        self.checkpoint_timer: Optional[threading.Timer] = None
+        self.last_checkpoint_time: Optional[datetime] = None
+        self._reliability_lock = threading.Lock()
         
         logger.info(f"BaseAgent {self.agent_name} initialized successfully")
     
@@ -371,13 +383,462 @@ Ensure all guidelines above are strictly followed during task execution.
         """
         logger.info(f"Resetting preparation state for {self.agent_name}")
         
+        # Stop checkpoint timer if running
+        self._stop_checkpoint_timer()
+        
         self.current_guidelines = None
         self.current_task_type = None
         self.current_task_description = None
         self.preparation_timestamp = None
         self._preparation_complete = False
+        self.current_task_id = None
         
         logger.info(f"✓ {self.agent_name} preparation state reset")
+    
+    def save_checkpoint(self, notes: Optional[str] = None, checkpoint_type: CheckpointType = CheckpointType.AUTO) -> Optional[str]:
+        """
+        Save current agent state as a checkpoint.
+        
+        Args:
+            notes: Optional notes about the checkpoint
+            checkpoint_type: Type of checkpoint to create
+            
+        Returns:
+            Checkpoint ID if successful, None otherwise
+        """
+        if not self.current_task_id:
+            logger.warning(f"Cannot save checkpoint - no active task for {self.agent_name}")
+            return None
+        
+        try:
+            with self._reliability_lock:
+                # Update current task state
+                context_data = {
+                    'agent_type': self.agent_type,
+                    'preparation_complete': self._preparation_complete,
+                    'guidelines_loaded': bool(self.current_guidelines),
+                    'task_type': self.current_task_type,
+                    'git_status': self.safe_git.get_safety_status()
+                }
+                
+                # Create checkpoint
+                checkpoint_id = self.task_state_manager.create_checkpoint(
+                    self.current_task_id,
+                    checkpoint_type,
+                    notes,
+                    rollback_data={
+                        'git_commit': self.safe_git.get_current_commit(),
+                        'git_branch': self.safe_git.get_current_branch()
+                    }
+                )
+                
+                if checkpoint_id:
+                    self.last_checkpoint_time = datetime.now(timezone.utc)
+                    logger.info(f"Saved checkpoint for {self.agent_name}: {checkpoint_id}")
+                
+                return checkpoint_id
+        
+        except Exception as e:
+            logger.error(f"Failed to save checkpoint for {self.agent_name}: {e}")
+            return None
+    
+    def resume_from_checkpoint(self, checkpoint_id: str) -> bool:
+        """
+        Resume agent work from a specific checkpoint.
+        
+        Args:
+            checkpoint_id: Checkpoint to resume from
+            
+        Returns:
+            True if resumed successfully
+        """
+        try:
+            with self._reliability_lock:
+                checkpoint = self.task_state_manager.get_checkpoint(checkpoint_id)
+                if not checkpoint:
+                    logger.error(f"Checkpoint not found: {checkpoint_id}")
+                    return False
+                
+                if checkpoint.agent_name != self.agent_name:
+                    logger.error(f"Checkpoint belongs to different agent: {checkpoint.agent_name}")
+                    return False
+                
+                # Restore task state
+                task_state = self.task_state_manager.get_task_state(checkpoint.task_id)
+                if not task_state:
+                    logger.error(f"Task state not found: {checkpoint.task_id}")
+                    return False
+                
+                # Restore agent state
+                self.current_task_id = checkpoint.task_id
+                self.current_task_type = task_state.task_type
+                self.current_task_description = task_state.task_description
+                
+                # Re-prepare with stored task info
+                if task_state.task_type and task_state.task_description:
+                    self.prepare_for_task(task_state.task_description, task_state.task_type)
+                
+                # Update task state to show resumption
+                self.task_state_manager.update_task_state(
+                    checkpoint.task_id,
+                    state=TaskState.IN_PROGRESS,
+                    current_step=f"Resumed from checkpoint {checkpoint_id[:8]}",
+                    add_conversation={
+                        'type': 'system',
+                        'message': f'Agent {self.agent_name} resumed from checkpoint {checkpoint_id}',
+                        'checkpoint_id': checkpoint_id
+                    }
+                )
+                
+                # Restart checkpoint timer
+                self._start_checkpoint_timer()
+                
+                logger.info(f"Successfully resumed {self.agent_name} from checkpoint {checkpoint_id}")
+                return True
+        
+        except Exception as e:
+            logger.error(f"Failed to resume from checkpoint {checkpoint_id}: {e}")
+            return False
+    
+    def validate_safe_to_proceed(self) -> Dict[str, Any]:
+        """
+        Validate that it's safe to proceed with potentially destructive operations.
+        
+        Returns:
+            Validation results with safety status and recommendations
+        """
+        validation = {
+            'safe_to_proceed': False,
+            'agent_name': self.agent_name,
+            'timestamp': datetime.now(timezone.utc).isoformat(),
+            'checks': [],
+            'warnings': [],
+            'blocking_issues': [],
+            'recommendations': []
+        }
+        
+        try:
+            # Check agent preparation
+            if self._preparation_complete:
+                validation['checks'].append({
+                    'check': 'agent_preparation',
+                    'status': 'pass',
+                    'message': 'Agent properly prepared with guidelines'
+                })
+            else:
+                validation['blocking_issues'].append({
+                    'issue': 'agent_preparation',
+                    'message': 'Agent not properly prepared - call prepare_for_task() first'
+                })
+            
+            # Check git safety
+            git_status = self.safe_git.get_safety_status()
+            if git_status.get('is_safe_branch', False):
+                validation['checks'].append({
+                    'check': 'git_safe_branch',
+                    'status': 'pass',
+                    'message': f"On safe branch: {git_status['current_branch']}"
+                })
+            else:
+                validation['warnings'].append({
+                    'warning': 'git_branch',
+                    'message': f"Not on safe branch: {git_status['current_branch']}"
+                })
+            
+            if git_status.get('has_uncommitted_changes', False):
+                validation['warnings'].append({
+                    'warning': 'uncommitted_changes',
+                    'message': 'Repository has uncommitted changes'
+                })
+            
+            if git_status.get('backup_branches_available', 0) > 0:
+                validation['checks'].append({
+                    'check': 'backup_available',
+                    'status': 'pass',
+                    'message': f"{git_status['backup_branches_available']} backup branches available"
+                })
+            else:
+                validation['warnings'].append({
+                    'warning': 'no_backup',
+                    'message': 'No backup branches available - consider creating one'
+                })
+            
+            # Check active task state
+            if self.current_task_id:
+                task_state = self.task_state_manager.get_task_state(self.current_task_id)
+                if task_state and task_state.state == TaskState.IN_PROGRESS:
+                    validation['checks'].append({
+                        'check': 'active_task',
+                        'status': 'pass',
+                        'message': f'Active task in progress: {task_state.task_id}'
+                    })
+                elif task_state:
+                    validation['warnings'].append({
+                        'warning': 'task_state',
+                        'message': f'Task in unexpected state: {task_state.state.value}'
+                    })
+            else:
+                validation['warnings'].append({
+                    'warning': 'no_active_task',
+                    'message': 'No active task - consider starting a task first'
+                })
+            
+            # Check checkpoint recency
+            if self.last_checkpoint_time:
+                time_since_checkpoint = datetime.now(timezone.utc) - self.last_checkpoint_time
+                if time_since_checkpoint.total_seconds() < 1800:  # 30 minutes
+                    validation['checks'].append({
+                        'check': 'recent_checkpoint',
+                        'status': 'pass',
+                        'message': f'Recent checkpoint available ({time_since_checkpoint.total_seconds():.0f}s ago)'
+                    })
+                else:
+                    validation['warnings'].append({
+                        'warning': 'old_checkpoint',
+                        'message': f'Last checkpoint is old ({time_since_checkpoint.total_seconds():.0f}s ago)'
+                    })
+            
+            # Determine overall safety
+            validation['safe_to_proceed'] = len(validation['blocking_issues']) == 0
+            
+            # Generate recommendations
+            recommendations = []
+            
+            if validation['blocking_issues']:
+                recommendations.append("Address blocking issues before proceeding")
+            
+            if validation['warnings']:
+                recommendations.append("Consider addressing warnings for safer operation")
+            
+            if not git_status.get('is_safe_branch', False):
+                recommendations.append("Create agent working branch before making changes")
+            
+            if git_status.get('backup_branches_available', 0) == 0:
+                recommendations.append("Create backup branch before destructive operations")
+            
+            if not self.last_checkpoint_time:
+                recommendations.append("Create initial checkpoint before starting work")
+            
+            validation['recommendations'] = recommendations
+        
+        except Exception as e:
+            validation['blocking_issues'].append({
+                'issue': 'validation_error',
+                'message': f'Error during safety validation: {str(e)}'
+            })
+            validation['safe_to_proceed'] = False
+        
+        return validation
+    
+    def get_rollback_options(self) -> Dict[str, Any]:
+        """
+        Get available rollback options for recovery scenarios.
+        
+        Returns:
+            Dictionary with rollback options
+        """
+        options = {
+            'agent_name': self.agent_name,
+            'current_task_id': self.current_task_id,
+            'timestamp': datetime.now(timezone.utc).isoformat(),
+            'task_checkpoints': [],
+            'git_rollback_options': {},
+            'recovery_recommendations': []
+        }
+        
+        try:
+            # Get task checkpoints
+            if self.current_task_id:
+                checkpoints = self.task_state_manager.get_task_checkpoints(self.current_task_id)
+                options['task_checkpoints'] = [
+                    {
+                        'checkpoint_id': cp.checkpoint_id,
+                        'type': cp.checkpoint_type.value,
+                        'timestamp': cp.timestamp.isoformat(),
+                        'step': cp.current_step,
+                        'progress': cp.progress_percentage,
+                        'notes': cp.notes
+                    }
+                    for cp in checkpoints[:10]  # Last 10 checkpoints
+                ]
+            
+            # Get git rollback options
+            options['git_rollback_options'] = self.safe_git.get_rollback_options()
+            
+            # Get agent recovery options
+            recovery_data = self.task_state_manager.get_recovery_options(self.agent_name)
+            options.update(recovery_data)
+            
+            # Generate recovery recommendations
+            recommendations = []
+            
+            if options['task_checkpoints']:
+                recommendations.append(f"Resume from one of {len(options['task_checkpoints'])} available checkpoints")
+            
+            if options['git_rollback_options'].get('backup_branches'):
+                backup_count = len(options['git_rollback_options']['backup_branches'])
+                recommendations.append(f"Rollback to one of {backup_count} backup branches")
+            
+            if options['interrupted_tasks']:
+                recommendations.append(f"Resume one of {len(options['interrupted_tasks'])} interrupted tasks")
+            
+            if not recommendations:
+                recommendations.append("No automatic recovery options available - manual intervention may be needed")
+            
+            options['recovery_recommendations'] = recommendations
+        
+        except Exception as e:
+            logger.error(f"Error getting rollback options: {e}")
+            options['error'] = str(e)
+        
+        return options
+    
+    def start_task_with_reliability(self, task_description: str, task_type: str, create_git_branch: bool = True) -> Optional[str]:
+        """
+        Start a new task with full reliability features enabled.
+        
+        Args:
+            task_description: Description of the task
+            task_type: Type of task
+            create_git_branch: Whether to create a new git branch
+            
+        Returns:
+            Task ID if started successfully
+        """
+        try:
+            with self._reliability_lock:
+                # Generate task ID
+                timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+                task_id = f"{self.agent_name}_{task_type}_{timestamp}"
+                
+                # Prepare for task
+                self.prepare_for_task(task_description, task_type)
+                
+                # Create git branch if requested
+                if create_git_branch:
+                    try:
+                        agent_branch, backup_branch = self.safe_git.create_agent_branch(
+                            self.agent_name, 
+                            task_description
+                        )
+                        logger.info(f"Created git branches: {agent_branch} (backup: {backup_branch})")
+                    except Exception as e:
+                        logger.warning(f"Failed to create git branches: {e}")
+                
+                # Create task state
+                task_state = self.task_state_manager.create_task_state(
+                    task_id,
+                    self.agent_name,
+                    task_description,
+                    task_type,
+                    {
+                        'git_branch': self.safe_git.get_current_branch(),
+                        'git_commit': self.safe_git.get_current_commit(),
+                        'preparation_timestamp': self.preparation_timestamp.isoformat() if self.preparation_timestamp else None
+                    }
+                )
+                
+                self.current_task_id = task_id
+                
+                # Update to in-progress
+                self.task_state_manager.update_task_state(
+                    task_id,
+                    state=TaskState.IN_PROGRESS,
+                    current_step="Task started",
+                    progress_percentage=0.0,
+                    add_conversation={
+                        'type': 'system',
+                        'message': f'Task started by {self.agent_name}',
+                        'task_description': task_description,
+                        'task_type': task_type
+                    }
+                )
+                
+                # Create initial checkpoint
+                self.save_checkpoint("Initial checkpoint after task start", CheckpointType.MILESTONE)
+                
+                # Start automatic checkpoint timer
+                self._start_checkpoint_timer()
+                
+                logger.info(f"Started task with reliability: {task_id}")
+                return task_id
+        
+        except Exception as e:
+            logger.error(f"Failed to start task with reliability: {e}")
+            return None
+    
+    def _start_checkpoint_timer(self) -> None:
+        """Start automatic checkpoint timer (10 minutes)."""
+        self._stop_checkpoint_timer()  # Stop existing timer
+        
+        def auto_checkpoint():
+            if self.current_task_id:
+                self.save_checkpoint("Automatic 10-minute checkpoint", CheckpointType.AUTO)
+                self._start_checkpoint_timer()  # Reschedule
+        
+        self.checkpoint_timer = threading.Timer(600.0, auto_checkpoint)  # 10 minutes
+        self.checkpoint_timer.daemon = True
+        self.checkpoint_timer.start()
+        logger.debug(f"Started checkpoint timer for {self.agent_name}")
+    
+    def _stop_checkpoint_timer(self) -> None:
+        """Stop automatic checkpoint timer."""
+        if self.checkpoint_timer:
+            self.checkpoint_timer.cancel()
+            self.checkpoint_timer = None
+            logger.debug(f"Stopped checkpoint timer for {self.agent_name}")
+    
+    def complete_task_safely(self, result: Dict[str, Any]) -> bool:
+        """
+        Complete current task safely with final checkpoint.
+        
+        Args:
+            result: Task completion result
+            
+        Returns:
+            True if completed successfully
+        """
+        if not self.current_task_id:
+            logger.warning(f"No active task to complete for {self.agent_name}")
+            return False
+        
+        try:
+            with self._reliability_lock:
+                # Create final checkpoint
+                final_checkpoint_id = self.save_checkpoint(
+                    "Final checkpoint before task completion", 
+                    CheckpointType.MILESTONE
+                )
+                
+                # Update task state to completed
+                success = self.task_state_manager.update_task_state(
+                    self.current_task_id,
+                    state=TaskState.COMPLETED,
+                    current_step="Task completed",
+                    progress_percentage=100.0,
+                    context_data={'completion_result': result, 'final_checkpoint': final_checkpoint_id},
+                    add_conversation={
+                        'type': 'system',
+                        'message': f'Task completed successfully by {self.agent_name}',
+                        'completion_result': result
+                    }
+                )
+                
+                if success:
+                    # Stop checkpoint timer
+                    self._stop_checkpoint_timer()
+                    
+                    # Clear current task
+                    completed_task_id = self.current_task_id
+                    self.current_task_id = None
+                    
+                    logger.info(f"Task completed safely: {completed_task_id}")
+                    return True
+                
+        except Exception as e:
+            logger.error(f"Failed to complete task safely: {e}")
+        
+        return False
     
     def __str__(self) -> str:
         """String representation of the agent."""

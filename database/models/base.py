@@ -8,9 +8,13 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://automation:secure_password_change_me@localhost:5433/automation_hub")
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./data/local_test.db")
 
-engine = create_engine(DATABASE_URL, echo=False)
+# Configure engine based on database type
+if DATABASE_URL.startswith('sqlite'):
+    engine = create_engine(DATABASE_URL, echo=False, connect_args={"check_same_thread": False})
+else:
+    engine = create_engine(DATABASE_URL, echo=False)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
